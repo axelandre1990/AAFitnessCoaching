@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {existsSync} from 'node:fs';
+const root=new URL('..',import.meta.url);
+const {DEFAULT_SETTINGS,METRICS,consumedCalories,validateMetrics}=await import(new URL((existsSync(new URL('scripts/',root))?'scripts/':'')+'tracking-model.js',root));
+test('Calories consommées 4/4/9 et blancs distincts de zéro',()=>{assert.equal(consumedCalories({protein_g:150,carbs_g:200,fat_g:60}),1940);assert.equal(consumedCalories({protein_g:0,carbs_g:0,fat_g:0}),0);assert.equal(consumedCalories({protein_g:null,carbs_g:0,fat_g:0}),null);});
+test('Options désactivées et menstruations non activées par défaut',()=>{assert.ok(!DEFAULT_SETTINGS.enabled_metrics.includes('menstruation'));assert.throws(()=>validateMetrics({stress:4},DEFAULT_SETTINGS));assert.deepEqual(validateMetrics({weight_kg:70},DEFAULT_SETTINGS),{weight_kg:70});});
+test('Valeurs, pression en paire, macros complètes et unité obligatoire',()=>{const s={enabled_metrics:METRICS.map(m=>m[0]),macro_tracking:true};assert.throws(()=>validateMetrics({bp_systolic:120},s));assert.throws(()=>validateMetrics({fasting_glucose:90},s));assert.throws(()=>validateMetrics({protein_g:100},s));assert.throws(()=>validateMetrics({stress:0},s));assert.throws(()=>validateMetrics({steps:1.5},s));assert.throws(()=>validateMetrics({notes:''},s));assert.doesNotThrow(()=>validateMetrics({fasting_glucose:5,glucose_unit:'mmol_l',bp_systolic:120,bp_diastolic:80,menstruation:'no',protein_g:100,carbs_g:0,fat_g:60},s));});
