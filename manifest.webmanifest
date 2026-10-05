@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "AA Fitness Coaching",
+  "short_name": "AA Fitness Coaching",
+  "description": "Ton espace AA Fitness Coaching, prêt à t’accompagner partout.",
+  "lang": "fr-BE",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#080a0a",
+  "background_color": "#080a0a",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

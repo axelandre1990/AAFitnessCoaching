@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#080a0a" />
+    <meta name="description" content="AA Fitness Coaching — ton espace fitness, toujours à portée de main." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+    <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./app.css" />
+    <title>AA Fitness Coaching</title>
+  </head>
+  <body>
+    <main class="launch" id="main-content">
+      <div class="launch__glow" aria-hidden="true"></div>
+      <header class="brandbar" aria-label="AA Fitness Coaching">
+        <span class="brandbar__dot" aria-hidden="true"></span>
+        <span>AA <span class="brandbar__light">FITNESS COACHING</span></span>
+      </header>
+
+      <section class="welcome" aria-labelledby="welcome-title">
+        <div class="welcome__logo-wrap">
+          <img class="welcome__logo" src="./aa-logo.png" alt="AA Fitness Coaching" width="1000" height="1000" />
+        </div>
+
+        <p class="eyebrow"><span class="eyebrow__line"></span> TON ESPACE PERSONNEL</p>
+        <h1 id="welcome-title">Ton prochain<br /><span>niveau commence ici.</span></h1>
+        <p class="welcome__copy">Ton espace AA Fitness Coaching, prêt à t’accompagner partout.</p>
+
+        <div class="secure-status" role="status" aria-live="polite">
+          <span class="secure-status__icon" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M5.75 8.25V6a4.25 4.25 0 0 1 8.5 0v2.25M4.75 8.25h10.5v8.5H4.75v-8.5Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11.5v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </span>
+          <span id="status-copy">Préparation de ton espace sécurisé</span>
+          <span class="secure-status__pulse" aria-hidden="true"></span>
+        </div>
+
+        <div class="welcome__actions">
+          <button class="auth-primary" id="open-login" type="button">Se connecter</button>
+          <button class="auth-secondary" id="open-signup" type="button">Première connexion ? Créer mon mot de passe</button>
+          <button class="coach-entry" id="open-coach" type="button">Accès coach <span aria-hidden="true">↗</span></button>
+          <button class="install-button" id="install-button" type="button">
+            <span id="install-label">Installer AA Fitness Coaching</span>
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3.5v8m0 0 3-3m-3 3-3-3M4 13v2.5h12V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <p class="install-note">Un accès rapide, directement depuis ton écran d’accueil.</p>
+        </div>
+
+        <p class="browser-note" id="browser-note" hidden>Tu peux aussi continuer à utiliser AA Fitness Coaching directement dans ton navigateur.</p>
+      </section>
+
+      <section class="auth-panel" id="auth-panel" aria-labelledby="auth-title" hidden>
+        <button class="auth-back" id="auth-back" type="button">← Retour</button>
+        <p class="eyebrow"><span class="eyebrow__line"></span> AA FITNESS COACHING</p>
+        <h2 id="auth-title">Se connecter</h2>
+        <p class="auth-intro" id="auth-intro">Retrouve ton espace personnel.</p>
+        <p class="auth-message" id="activation-note" hidden>Ton coach doit d’abord t’ajouter à AA Fitness Coaching. Tu recevras ensuite un e-mail sécurisé pour créer ton mot de passe et activer ton espace.</p>
+        <form id="auth-form" novalidate>
+          <label class="auth-field" id="name-field" hidden>Nom complet
+            <input name="name" type="text" autocomplete="name" minlength="2" />
+          </label>
+          <label class="auth-field" id="email-field">Adresse e-mail
+            <input name="email" type="email" autocomplete="email" required />
+          </label>
+          <label class="auth-field" id="password-field">Mot de passe
+            <input name="password" type="password" autocomplete="current-password" minlength="8" required />
+          </label>
+          <label class="auth-field" id="confirm-password-field" hidden>Confirmer le mot de passe
+            <input name="confirm_password" type="password" autocomplete="new-password" minlength="8" />
+          </label>
+          <button class="forgot-link" id="forgot-password" type="button">Mot de passe oublié ?</button>
+          <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
+          <button class="auth-primary auth-submit" id="auth-submit" type="submit">Se connecter</button>
+        </form>
+        <p class="auth-switch" id="auth-switch"></p>
+      </section>
+
+      <section class="app-shell" id="signed-in-panel" hidden aria-label="Espace AA Fitness Coaching">
+        <header class="app-header">
+          <div class="app-header__brand"><span class="brandbar__dot" aria-hidden="true"></span><span>AA <span class="brandbar__light">FITNESS COACHING</span></span></div>
+          <div class="app-header__user">
+            <div class="app-header__identity"><span id="dashboard-name"></span><span id="dashboard-role" class="app-header__role"></span></div>
+            <button class="sign-out" id="sign-out" type="button">Se déconnecter</button>
+          </div>
+        </header>
+
+        <div class="dashboard-content">
+          <section class="dashboard-view" id="client-dashboard" hidden>
+            <div class="dashboard-intro">
+              <p class="eyebrow"><span class="eyebrow__line"></span> ESPACE CLIENT</p>
+              <h2 id="dashboard-title">Ton suivi</h2>
+              <p>Partage tes nouvelles avec ton coach et retrouve ses retours au même endroit.</p>
+            </div>
+            <div class="dashboard-grid dashboard-grid--client">
+              <section class="dashboard-card checkin-card" aria-labelledby="checkin-title">
+                <div class="card-heading"><div><p class="card-kicker">TON SUIVI</p><h3 id="checkin-title">Nouveau check-in</h3></div><span class="card-icon" aria-hidden="true">↗</span></div>
+                <p class="card-copy">Comment se passe ta semaine ? Écris ton retour pour ton coach.</p>
+                <form id="checkin-form">
+                  <label class="auth-field" for="checkin-body">Ton message
+                    <textarea id="checkin-body" name="body" maxlength="4000" rows="6" required placeholder="Écris ton check-in ici…"></textarea>
+                  </label>
+                  <p class="inline-message" id="checkin-message" role="status" aria-live="polite"></p>
+                  <button class="auth-primary dashboard-submit" id="checkin-submit" type="submit">Envoyer mon check-in</button>
+                </form>
+              </section>
+              <section class="dashboard-card history-card" aria-labelledby="history-title">
+                <div class="card-heading"><div><p class="card-kicker">TES ÉCHANGES</p><h3 id="history-title">Check-ins et retours</h3></div></div>
+                <div class="timeline" id="client-history"><p class="empty-state">Chargement de ton suivi…</p></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="dashboard-view" id="coach-dashboard" hidden>
+            <div class="dashboard-intro">
+              <p class="eyebrow"><span class="eyebrow__line"></span> ESPACE COACH</p>
+              <h2 id="coach-title">Ton espace coach</h2>
+              <p>Retrouve tes clients, lis leurs check-ins et envoie-leur ton retour.</p>
+            </div>
+            <div class="coach-stats">
+              <article class="dashboard-card stat-card"><span>CLIENTS</span><strong id="client-count">—</strong></article>
+              <article class="dashboard-card stat-card"><span>À TRAITER</span><strong id="pending-count">—</strong></article>
+            </div>
+            <div class="dashboard-grid dashboard-grid--coach" id="coach-main-grid">
+              <section class="dashboard-card invite-card" aria-labelledby="invite-title">
+                <div class="card-heading"><div><p class="card-kicker">NOUVEAU CLIENT</p><h3 id="invite-title">Inviter un client</h3></div></div>
+                <p class="card-copy">Le client recevra un e-mail pour activer son accès. Les comptes existants peuvent aussi être ajoutés.</p>
+                <form id="invite-form">
+                  <label class="auth-field" for="client-name">Nom du client<input id="client-name" name="full_name" type="text" autocomplete="name" minlength="2" maxlength="100" required /></label>
+                  <label class="auth-field" for="client-email">Adresse e-mail<input id="client-email" name="email" type="email" autocomplete="email" required /></label>
+                  <p class="inline-message" id="invite-message" role="status" aria-live="polite"></p>
+                  <button class="auth-primary dashboard-submit" id="invite-submit" type="submit">Inviter le client</button>
+                </form>
+              </section>
+              <section class="dashboard-card clients-card" aria-labelledby="clients-title">
+                <div class="card-heading"><div><p class="card-kicker">TON SUIVI</p><h3 id="clients-title">Mes clients</h3></div><button class="icon-button" id="refresh-coach" type="button" aria-label="Actualiser les clients">↻</button></div>
+                <div class="client-list" id="client-list"><p class="empty-state">Chargement des clients…</p></div>
+              </section>
+            </div>
+            <section class="dashboard-card coach-detail" id="coach-client-detail" hidden aria-labelledby="coach-detail-title">
+              <button class="auth-back coach-back" id="coach-back" type="button">← Tous les clients</button>
+              <div class="card-heading"><div><p class="card-kicker">SUIVI CLIENT</p><h3 id="coach-detail-title">Check-ins</h3></div></div>
+              <div class="timeline" id="coach-history"></div>
+            </section>
+          </section>
+
+          <section class="dashboard-view access-blocked" id="access-blocked" hidden>
+            <p class="eyebrow"><span class="eyebrow__line"></span> ACCÈS NON CONFIGURÉ</p>
+            <h2>Ton espace n’est pas encore prêt.</h2>
+            <p class="auth-intro" id="access-message">Ton compte est connecté, mais son profil AA Fitness Coaching n’a pas encore été configuré.</p>
+            <button class="auth-secondary" id="blocked-sign-out" type="button">Se déconnecter</button>
+          </section>
+        </div>
+      </section>
+
+      <footer class="launch-footer">
+        <span>AA FITNESS COACHING</span>
+        <span class="launch-footer__separator" aria-hidden="true">·</span>
+        <span>BUILT FOR YOUR NEXT LEVEL</span>
+      </footer>
+    </main>
+
+    <dialog class="install-dialog" id="install-dialog" aria-labelledby="dialog-title">
+      <form method="dialog" class="install-dialog__surface">
+        <button class="install-dialog__close" type="submit" aria-label="Fermer">×</button>
+        <span class="dialog-mark" aria-hidden="true">AA</span>
+        <p class="eyebrow">AA FITNESS COACHING</p>
+        <h2 id="dialog-title">Ajoute l’app à ton téléphone</h2>
+        <div class="dialog-copy" id="dialog-copy"></div>
+        <button class="dialog-done" type="submit">Compris</button>
+      </form>
+    </dialog>
+
+    <script type="module" src="./main.js?v=13"></script>
+    <script type="module" src="./auth.js?v=13"></script>
+  </body>
+</html>
