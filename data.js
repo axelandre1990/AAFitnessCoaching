@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js?v=14";
+import { supabase } from "./supabase.js?v=15";
 
 function throwIfError(error) {
   if (!error) return;
@@ -49,6 +49,69 @@ export async function getClientHome() {
   throwIfError(error);
   const feedback = await getFeedback(checkIns || []);
   return attachFeedback(checkIns || [], feedback);
+}
+
+export async function getClientPlan(clientId) {
+  const { data, error } = await supabase
+    .from("client_plans")
+    .select("nutrition_plan, training_plan, updated_at")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  throwIfError(error);
+  return data;
+}
+
+export async function saveClientPlan(clientId, { nutritionPlan, trainingPlan }) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  throwIfError(authError);
+  if (!user) throw new Error("Ta session a expiré. Reconnecte-toi pour modifier le programme.");
+  const plan = {
+    client_id: clientId,
+    coach_id: user.id,
+    nutrition_plan: String(nutritionPlan || "").trim(),
+    training_plan: String(trainingPlan || "").trim(),
+    updated_at: new Date().toISOString()
+  };
+  const { data, error } = await supabase
+    .from("client_plans")
+    .upsert(plan, { onConflict: "client_id" })
+    .select("nutrition_plan, training_plan, updated_at")
+    .single();
+  throwIfError(error);
+  return data;
+}
+
+export async function getProgressEntries(clientId) {
+  const { data, error } = await supabase
+    .from("progress_entries")
+    .select("id, weight_kg, waist_cm, notes, created_at")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false })
+    .limit(24);
+  throwIfError(error);
+  return data || [];
+}
+
+export async function submitProgressEntry({ weightKg, waistCm, notes }) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  throwIfError(authError);
+  if (!user) throw new Error("Ta session a expiré. Reconnecte-toi pour ajouter une mesure.");
+  const entry = {
+    client_id: user.id,
+    weight_kg: weightKg === "" || weightKg == null ? null : Number(weightKg),
+    waist_cm: waistCm === "" || waistCm == null ? null : Number(waistCm),
+    notes: String(notes || "").trim()
+  };
+  if (entry.weight_kg === null && entry.waist_cm === null) {
+    throw new Error("Ajoute au moins ton poids ou ton tour de taille.");
+  }
+  const { data, error } = await supabase
+    .from("progress_entries")
+    .insert(entry)
+    .select("id, weight_kg, waist_cm, notes, created_at")
+    .single();
+  throwIfError(error);
+  return data;
 }
 
 export async function submitCheckIn(body) {

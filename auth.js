@@ -1,6 +1,6 @@
-import { supabase } from "./supabase.js?v=14";
-import { getCurrentProfile } from "./data.js?v=14";
-import { mountDashboard, unmountDashboard } from "./dashboard.js?v=14";
+import { supabase } from "./supabase.js?v=15";
+import { getCurrentProfile } from "./data.js?v=15";
+import { mountDashboard, unmountDashboard } from "./dashboard.js?v=15";
 
 const landing = document.querySelector(".welcome");
 const panel = document.querySelector("#auth-panel");

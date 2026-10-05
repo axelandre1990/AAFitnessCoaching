@@ -226,6 +226,22 @@ h1 span { color: #a1aaa7; }
 .access-blocked .eyebrow { margin-bottom: 0.85rem; }
 .access-blocked .auth-secondary { margin-top: 0.4rem; }
 
+.programme-card, .progress-grid { margin-top: 1rem; }
+.programme-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; margin-top: 1rem; }
+.programme-section { min-width: 0; padding: 1rem; border: 1px solid rgb(255 255 255 / 8%); border-radius: 0.9rem; background: rgb(0 0 0 / 13%); }
+.programme-section .card-kicker { margin-bottom: 0.65rem; }
+.programme-copy { color: #d6e1de; font-size: 0.84rem; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.programme-updated { min-height: 1rem; margin: 0.8rem 0 0; color: #77817e; font-size: 0.68rem; }
+.measurement-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+.progress-history { display: grid; gap: 0.55rem; margin-top: 1rem; }
+.progress-entry { display: grid; grid-template-columns: 1fr auto; gap: 0.3rem 0.8rem; padding: 0.8rem 0.85rem; border: 1px solid rgb(255 255 255 / 8%); border-radius: 0.85rem; background: rgb(0 0 0 / 13%); }
+.progress-entry__date { color: #97a29e; font-size: 0.67rem; }
+.progress-entry__values { color: var(--color-accent); font-size: 0.82rem; font-weight: 700; text-align: right; }
+.progress-entry__notes { grid-column: 1 / -1; margin: 0.2rem 0 0; color: #b8c2be; font-size: 0.76rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.coach-client-tools { margin-top: 1rem; }
+.coach-client-tools textarea { width: 100%; min-height: 96px; resize: vertical; padding: 0.85rem 0.95rem; border: 1px solid rgb(255 255 255 / 12%); border-radius: 0.85rem; background: #111414; color: var(--color-fg); font: inherit; font-size: 0.88rem; line-height: 1.55; }
+.coach-client-tools textarea:focus { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
 .install-button {
   display: flex;
   width: 100%;
@@ -284,6 +300,7 @@ h1 span { color: #a1aaa7; }
   .app-header__identity { text-align: right; }
   .sign-out { min-height: 35px; padding: 0.45rem 0.7rem; font-size: 0.68rem; }
   .dashboard-grid--client, .dashboard-grid--coach { grid-template-columns: 1fr; }
+  .programme-grid { grid-template-columns: 1fr; }
   .dashboard-intro { margin-bottom: 1.35rem; }
   .dashboard-card { border-radius: 1.05rem; }
   .coach-stats { gap: 0.65rem; }

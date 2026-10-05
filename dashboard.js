@@ -2,10 +2,14 @@ import {
   getClientHome,
   getCoachHome,
   getClientCheckIns,
+  getClientPlan,
+  getProgressEntries,
+  saveClientPlan,
   submitCheckIn,
+  submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=14";
+} from "./data.js?v=15";
 
 const shell = document.querySelector("#signed-in-panel");
 const clientView = document.querySelector("#client-dashboard");
@@ -15,8 +19,11 @@ const clientHistory = document.querySelector("#client-history");
 const coachHistory = document.querySelector("#coach-history");
 const clientList = document.querySelector("#client-list");
 const coachGrid = document.querySelector("#coach-main-grid");
+const clientProgress = document.querySelector("#client-progress-history");
+const coachProgress = document.querySelector("#coach-progress-history");
 let activeRole = null;
 let selectedClient = null;
+let activeClientId = null;
 
 function announce(element, text, kind = "") {
   element.textContent = text;
@@ -75,16 +82,51 @@ function renderCheckIn(checkIn, { coachMode = false } = {}) {
   return card;
 }
 
-async function loadClient() {
+function formatMeasurement(value, unit) {
+  if (value === null || value === undefined || value === "") return null;
+  return `${new Intl.NumberFormat("fr-BE", { maximumFractionDigits: 1 }).format(Number(value))} ${unit}`;
+}
+
+function renderProgress(target, entries, emptyCopy) {
+  target.replaceChildren();
+  if (!entries.length) {
+    target.append(element("p", "empty-state", emptyCopy));
+    return;
+  }
+  for (const entry of entries) {
+    const row = element("article", "progress-entry");
+    row.append(element("time", "progress-entry__date", dateLabel(entry.created_at)));
+    const values = [formatMeasurement(entry.weight_kg, "kg") && `Poids ${formatMeasurement(entry.weight_kg, "kg")}`, formatMeasurement(entry.waist_cm, "cm") && `Taille ${formatMeasurement(entry.waist_cm, "cm")`]
+      .filter(Boolean).join(" · ");
+    row.append(element("strong", "progress-entry__values", values));
+    if (entry.notes) row.append(element("p", "progress-entry__notes", entry.notes));
+    target.append(row);
+  }
+}
+
+async function loadProgressHistory(target, clientId, emptyCopy) {
+  target.replaceChildren(element("p", "empty-state", "Chargement de la progression…"));
+  try {
+    renderProgress(target, await getProgressEntries(clientId), emptyCopy);
+  } catch (error) {
+    target.replaceChildren(element("p", "empty-state empty-state--error", error.message));
+  }
+}
+
+async function loadClient(clientId) {
   clientHistory.replaceChildren(element("p", "empty-state", "Chargement de ton suivi…"));
   try {
-    const checkIns = await getClientHome();
+    const [checkIns, plan] = await Promise.all([getClientHome(), getClientPlan(clientId)]);
     clientHistory.replaceChildren();
     if (!checkIns.length) {
       clientHistory.append(element("p", "empty-state", "Ton premier check-in apparaîtra ici après son envoi."));
-      return;
+    } else {
+      for (const checkIn of checkIns) clientHistory.append(renderCheckIn(checkIn));
     }
-    for (const checkIn of checkIns) clientHistory.append(renderCheckIn(checkIn));
+    document.querySelector("#client-nutrition-plan").textContent = plan?.nutrition_plan || "Ton coach n’a pas encore ajouté de repères nutrition.";
+    document.querySelector("#client-training-plan").textContent = plan?.training_plan || "Ton coach n’a pas encore ajouté de programme d’entraînement.";
+    document.querySelector("#client-plan-updated").textContent = plan?.updated_at ? `Mis à jour le ${dateLabel(plan.updated_at)}` : "Ton programme apparaîtra ici dès que ton coach l’aura préparé.";
+    await loadProgressHistory(clientProgress, clientId, "Aucune mesure enregistrée pour le moment.");
   } catch (error) {
     clientHistory.replaceChildren(element("p", "empty-state empty-state--error", error.message));
   }
@@ -126,13 +168,18 @@ async function showClientHistory(clientId, clientName) {
   document.querySelector("#coach-client-detail").hidden = false;
   coachHistory.replaceChildren(element("p", "empty-state", "Chargement des check-ins…"));
   try {
-    const checkIns = await getClientCheckIns(clientId);
+    const [checkIns, plan] = await Promise.all([getClientCheckIns(clientId), getClientPlan(clientId)]);
     coachHistory.replaceChildren();
     if (!checkIns.length) {
       coachHistory.append(element("p", "empty-state", "Ce client n’a pas encore envoyé de check-in."));
-      return;
+    } else {
+      for (const checkIn of checkIns) coachHistory.append(renderCheckIn(checkIn, { coachMode: true }));
     }
-    for (const checkIn of checkIns) coachHistory.append(renderCheckIn(checkIn, { coachMode: true }));
+    const planForm = document.querySelector("#coach-plan-form");
+    planForm.elements.nutrition_plan.value = plan?.nutrition_plan || "";
+    planForm.elements.training_plan.value = plan?.training_plan || "";
+    announce(document.querySelector("#coach-plan-message"), plan?.updated_at ? `Dernière mise à jour · ${dateLabel(plan.updated_at)}` : "Aucun programme enregistré.");
+    await loadProgressHistory(coachProgress, clientId, "Ce client n’a pas encore saisi de mesure.");
   } catch (error) {
     coachHistory.replaceChildren(element("p", "empty-state empty-state--error", error.message));
   }
@@ -148,8 +195,13 @@ export function unmountDashboard() {
   clientHistory.replaceChildren();
   coachHistory.replaceChildren();
   clientList.replaceChildren();
+  clientProgress.replaceChildren();
+  coachProgress.replaceChildren();
   document.querySelector("#checkin-form").reset();
   document.querySelector("#invite-form").reset();
+  document.querySelector("#progress-form").reset();
+  document.querySelector("#coach-plan-form").reset();
+  activeClientId = null;
 }
 
 export async function mountDashboard({ role, profile, onSignOut }) {
@@ -159,8 +211,9 @@ export async function mountDashboard({ role, profile, onSignOut }) {
   document.querySelector("#dashboard-role").textContent = role === "coach" ? "COACH" : "CLIENT";
   if (role === "client") {
     activeRole = role;
+    activeClientId = profile.id;
     clientView.hidden = false;
-    await loadClient();
+    await loadClient(profile.id);
   } else if (role === "coach") {
     activeRole = role;
     coachView.hidden = false;
@@ -187,12 +240,54 @@ document.querySelector("#checkin-form").addEventListener("submit", async (event)
     await submitCheckIn(body);
     form.reset();
     announce(message, "Ton check-in a été envoyé à ton coach.", "success");
-    await loadClient();
+    await loadClient(activeClientId);
   } catch (error) {
     announce(message, error.message, "error");
   } finally {
     button.disabled = false;
     button.textContent = "Envoyer mon check-in";
+  }
+});
+
+document.querySelector("#progress-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (activeRole !== "client") return;
+  const form = event.currentTarget;
+  const button = document.querySelector("#progress-submit");
+  const message = document.querySelector("#progress-message");
+  button.disabled = true;
+  button.textContent = "Enregistrement…";
+  announce(message, "Enregistrement de ta mesure…");
+  try {
+    await submitProgressEntry({ weightKg: form.elements.weight_kg.value, waistCm: form.elements.waist_cm.value, notes: form.elements.notes.value });
+    form.reset();
+    announce(message, "Ta mesure a été ajoutée à ta progression.", "success");
+    await loadProgressHistory(clientProgress, activeClientId, "Aucune mesure enregistrée pour le moment.");
+  } catch (error) {
+    announce(message, error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Enregistrer ma mesure";
+  }
+});
+
+document.querySelector("#coach-plan-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (activeRole !== "coach" || !selectedClient) return;
+  const form = event.currentTarget;
+  const button = document.querySelector("#coach-plan-submit");
+  const message = document.querySelector("#coach-plan-message");
+  button.disabled = true;
+  button.textContent = "Enregistrement…";
+  announce(message, "Enregistrement du programme…");
+  try {
+    const plan = await saveClientPlan(selectedClient.id, { nutritionPlan: form.elements.nutrition_plan.value, trainingPlan: form.elements.training_plan.value });
+    announce(message, `Programme enregistré · ${dateLabel(plan.updated_at)}`, "success");
+  } catch (error) {
+    announce(message, error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Enregistrer le programme";
   }
 });
 
