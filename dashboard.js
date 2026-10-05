@@ -96,7 +96,9 @@ function renderProgress(target, entries, emptyCopy) {
   for (const entry of entries) {
     const row = element("article", "progress-entry");
     row.append(element("time", "progress-entry__date", dateLabel(entry.created_at)));
-    const values = [formatMeasurement(entry.weight_kg, "kg") && `Poids ${formatMeasurement(entry.weight_kg, "kg")}`, formatMeasurement(entry.waist_cm, "cm") && `Taille ${formatMeasurement(entry.waist_cm, "cm")`]
+    const weightLabel = formatMeasurement(entry.weight_kg, "kg");
+    const waistLabel = formatMeasurement(entry.waist_cm, "cm");
+    const values = [weightLabel && `Poids ${weightLabel}`, waistLabel && `Taille ${waistLabel}`]
       .filter(Boolean).join(" · ");
     row.append(element("strong", "progress-entry__values", values));
     if (entry.notes) row.append(element("p", "progress-entry__notes", entry.notes));
@@ -192,6 +194,8 @@ export function unmountDashboard() {
   clientView.hidden = true;
   coachView.hidden = true;
   blockedView.hidden = true;
+  coachGrid.hidden = false;
+  document.querySelector("#coach-client-detail").hidden = true;
   clientHistory.replaceChildren();
   coachHistory.replaceChildren();
   clientList.replaceChildren();
