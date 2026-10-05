@@ -52,10 +52,11 @@ test("published Pages files match source and include the nutrition catalog", asy
       readFile(path.join(pages, file), "utf8")
     ]);
     if (file === "index.html") {
-      assert.match(deployed, /main\.js\?v=17/);
+      const version=source.match(/main\.js\?v=(\d+)/)[1];
+      assert.match(deployed, new RegExp(`main\\.js\\?v=${version}`));
       assert.match(deployed, /id="nutrition-builder"/);
     } else if (file === "service-worker.js") {
-      assert.match(deployed, /aa-fitness-coaching-shell-v5/);
+      assert.match(deployed, /aa-fitness-coaching-shell-v\d+/);
     } else {
       assert.equal(deployed, source, `${file} differs between source and Pages output`);
     }

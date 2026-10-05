@@ -39,8 +39,8 @@ test('coach composes a program and client records actual kg and reps separately 
  const plan=await p.evaluate(()=>JSON.parse(builder.serialize()));assert.equal(plan.days[0].exercises[0].targetLoadKg,42.5);assert.equal(plan.days[0].exercises[0].sets,3);
  await p.evaluate(plan=>{document.querySelector('#builder').replaceChildren();modules.training.renderClientTraining(document.querySelector('#client'),JSON.stringify(plan),{onSubmit:async(day,logs)=>window.savedLogs={day,logs}});},plan);
  await p.locator('.client-session summary').click();await p.getByRole('button',{name:'Enregistrer cette séance'}).click();assert.match(await p.locator('.workout-form .inline-message').innerText(),/au moins une série/);
- await p.locator('.workout-set input[type=checkbox]').first().check();await p.locator('.workout-set').first().getByLabel('Répétitions',{exact:true}).fill('9');await p.locator('.workout-set').first().getByLabel('Charge (kg)',{exact:true}).fill('40');await p.getByRole('button',{name:'Enregistrer cette séance'}).click();
- await p.waitForFunction(()=>window.savedLogs);const result=await p.evaluate(()=>window.savedLogs);assert.equal(result.logs[0].load_kg,40);assert.equal(result.logs[0].reps,9);assert.equal(plan.days[0].exercises[0].targetLoadKg,42.5);
+ await p.locator('.workout-set input[type=checkbox]').first().check();await p.locator('.workout-set').first().getByLabel('Répétitions',{exact:true}).fill('9');await p.locator('.workout-set').first().getByLabel('Charge (kg)',{exact:true}).fill('40.2');assert.equal(await p.locator('.workout-set').first().getByLabel('Charge (kg)',{exact:true}).evaluate(input=>input.validity.stepMismatch),false);await p.getByRole('button',{name:'Enregistrer cette séance'}).click();
+ await p.waitForFunction(()=>window.savedLogs);const result=await p.evaluate(()=>window.savedLogs);assert.equal(result.logs[0].load_kg,40.2);assert.equal(result.logs[0].reps,9);assert.equal(plan.days[0].exercises[0].targetLoadKg,42.5);
  assert.equal(await p.getByRole('button',{name:'Séance enregistrée',exact:true}).isDisabled(),true);
  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);await p.screenshot({path:'/private/tmp/aa-training-mobile.png',fullPage:true});await p.close();
 });
@@ -48,8 +48,9 @@ test('V4 nutrition uses the selected food to calculate and serialize the actual 
  const p=await page();await p.evaluate(async()=>window.nutritionEditor=await modules.nutrition.mountNutritionBuilder(document.querySelector('#nutrition')));
  await p.locator('.nutrition-meal').first().getByRole('searchbox').fill('Poulet poitrine chair maigre');await p.locator('.nutrition-search__result').first().waitFor();await p.locator('.nutrition-search__result').first().click();await p.locator('.nutrition-meal').first().getByLabel('Quantité (g)',{exact:true}).fill('150');await p.locator('.nutrition-meal').first().getByRole('button',{name:'Ajouter l’aliment'}).click();
  const plan=await p.evaluate(()=>JSON.parse(nutritionEditor.serialize()));const item=plan.meals[0].items[0];assert.equal(item.grams,150);
- assert.match(await p.locator('.nutrition-meal__totals').first().innerText(),new RegExp(`${Math.round(item.per100g.kcal*1.5)} kcal`));
- await p.locator('.nutrition-item').first().getByRole('spinbutton').fill('250');assert.match(await p.locator('.nutrition-meal__totals').first().innerText(),new RegExp(`${Math.round(item.per100g.kcal*2.5)} kcal`));await p.close();
+ assert.match(await p.locator('.nutrition-meal__totals').first().innerText(),new RegExp(`${Math.round((4*item.per100g.protein_g+4*item.per100g.carbs_g+9*item.per100g.fat_g)*1.5)} kcal`));
+ assert.equal(Number(await p.locator('.nutrition-comparison__actual [data-metric=kcal]').getAttribute('data-value')),Number(((4*item.per100g.protein_g+4*item.per100g.carbs_g+9*item.per100g.fat_g)*1.5).toFixed(2)));
+ await p.locator('.nutrition-item').first().getByRole('spinbutton').fill('250');assert.match(await p.locator('.nutrition-meal__totals').first().innerText(),new RegExp(`${Math.round((4*item.per100g.protein_g+4*item.per100g.carbs_g+9*item.per100g.fat_g)*2.5)} kcal`));await p.close();
 });
 
 function supabaseStub(role) {
@@ -68,7 +69,7 @@ test('signed-in coach can load both editors, choose the check-in day and save a 
  await p.locator('.client-row').click();await p.locator('#training-builder .training-library').waitFor();assert.equal(await p.locator('#nutrition-builder .nutrition-meal').count(),6);
  assert.equal(await p.locator('#checkin-schedule-form select').inputValue(),'2');await p.locator('#checkin-schedule-form select').selectOption('3');await p.getByRole('button',{name:'Enregistrer le jour de check-in'}).click();
  await p.waitForFunction(()=>window.rpcCalls?.length);const rpc=await p.evaluate(()=>window.rpcCalls[0]);assert.equal(rpc.name,'aa_set_checkin_day');assert.equal(rpc.payload.weekday,3);
- await p.locator('.training-library summary').click();await p.getByRole('searchbox',{name:'Rechercher un exercice'}).fill('1-Arm DB Row');await p.locator('.exercise-result').first().click();
+ await p.getByRole('link',{name:'Plan d’entraînement',exact:true}).click();assert.equal(await p.evaluate(()=>location.hash),'#training-builder');await p.locator('.training-library summary').click();await p.getByRole('searchbox',{name:'Rechercher un exercice'}).fill('1-Arm DB Row');await p.locator('.exercise-result').first().click();
  await p.getByRole('button',{name:'Enregistrer le programme',exact:true}).click();await p.waitForFunction(()=>window.savedPlan);const saved=await p.evaluate(()=>window.savedPlan);assert.equal(JSON.parse(saved.training_plan).schema,'aa-training-plan');assert.equal(JSON.parse(saved.nutrition_plan).schema,'aa-nutrition-plan');assert.deepEqual(errors,[]);await p.close();
 });
 test('signed-in client loads the complete weekly form in the existing dashboard',async()=>{
@@ -76,4 +77,40 @@ test('signed-in client loads the complete weekly form in the existing dashboard'
  await p.route('**/supabase.js*',route=>route.fulfill({status:200,contentType:'application/javascript',body:supabaseStub('client')}));await p.goto(base+'/index.html');await p.locator('#checkin-form [name=full_name]').waitFor();
  assert.equal(await p.locator('#checkin-form [name]').count(),26);assert.match(await p.locator('#checkin-form .weekly-status').innerText(),/Mardi/);assert.equal(await p.locator('#checkin-form [name=email]').inputValue(),'fixture@example.invalid');assert.deepEqual(errors,[]);
  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);await p.screenshot({path:'/private/tmp/aa-checkin-mobile.png',fullPage:true});await p.close();
+});
+
+test('nutrition automatically calculates theoretical kcal and compares the live daily plan after edits',async()=>{
+ const p=await page();const saved={schema:'aa-nutrition-plan',version:1,targets:{kcal:9999,protein_g:200,carbs_g:250,fat_g:70},meals:[{name:'Repas 1',items:[{foodId:'fixture',name:'Aliment de test',source:'AA_CUSTOM',grams:100,per100g:{kcal:999,protein_g:20,carbs_g:30,fat_g:10,fiber_g:2}}]},{name:'Repas 2',items:[{foodId:'fixture2',name:'Aliment 2',source:'AA_CUSTOM',grams:100,per100g:{kcal:999,protein_g:20,carbs_g:30,fat_g:10,fiber_g:2}}]}]};
+ await p.evaluate(async saved=>window.nutritionEditor=await modules.nutrition.mountNutritionBuilder(document.querySelector('#nutrition'),JSON.stringify(saved)),saved);
+ const calories=p.getByLabel('Calories théoriques (kcal)',{exact:true});assert.equal(await calories.count(),1);assert.equal(await calories.isEditable(),false);assert.equal(await calories.inputValue(),'2430');
+ const actual=p.locator('.nutrition-comparison__actual');assert.equal(await actual.locator('[data-metric=kcal]').getAttribute('data-value'),'580');
+ await p.getByLabel('Protéines (g)',{exact:true}).fill('40');await p.getByLabel('Glucides (g)',{exact:true}).fill('60');await p.getByLabel('Lipides (g)',{exact:true}).fill('20');assert.equal(await calories.inputValue(),'580');
+ assert.equal(await p.locator('.nutrition-comparison__delta [data-metric=kcal]').innerText(),'0');
+ assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+ await p.setViewportSize({width:1100,height:900});await p.locator('.nutrition-targets').scrollIntoViewIfNeeded();await p.screenshot({path:'/private/tmp/aa-macro-comparison.png',fullPage:false});
+ await p.locator('.nutrition-item').first().getByRole('spinbutton').fill('200');assert.equal(await actual.locator('[data-metric=kcal]').getAttribute('data-value'),'870');
+ await p.locator('.nutrition-item').first().getByRole('button',{name:'Retirer'}).click();assert.equal(await actual.locator('[data-metric=kcal]').getAttribute('data-value'),'290');
+ assert.equal((await p.evaluate(()=>JSON.parse(nutritionEditor.serialize()))).targets.kcal,580);
+ await p.close();
+});
+test('coach can choose an exercise from a list filtered by muscle and equipment',async()=>{
+ const p=await page();await p.evaluate(async()=>window.builder=await modules.training.mountTrainingBuilder(document.querySelector('#builder')));await p.locator('.training-library summary').click();
+ await p.getByRole('combobox',{name:'Filtrer par muscle'}).selectOption('dorsaux');await p.getByRole('combobox',{name:'Filtrer par matériel'}).selectOption('Dumbbell');
+ assert.equal(await p.getByRole('combobox',{name:'Choisir un exercice'}).count(),1);await p.getByRole('combobox',{name:'Choisir un exercice'}).selectOption({label:'1-Arm DB Row'});
+ const plan=await p.evaluate(()=>JSON.parse(builder.serialize()));assert.equal(plan.days[0].exercises.length,1);assert.equal(plan.days[0].exercises[0].name,'1-Arm DB Row');assert.equal(plan.days[0].exercises[0].muscle,'dorsaux');await p.close();
+});
+
+test('existing calorie-only targets are retained until macros change and empty goals remain null',async()=>{
+ const p=await page();await p.evaluate(async()=>window.nutritionEditor=await modules.nutrition.mountNutritionBuilder(document.querySelector('#nutrition'),JSON.stringify({schema:'aa-nutrition-plan',version:1,targets:{kcal:2000},meals:[]})));
+ assert.equal((await p.evaluate(()=>JSON.parse(nutritionEditor.serialize()))).targets.kcal,2000);
+ await p.getByLabel('Protéines (g)',{exact:true}).fill('100');assert.equal(await p.getByLabel('Calories théoriques (kcal)',{exact:true}).inputValue(),'400');
+ await p.getByLabel('Protéines (g)',{exact:true}).fill('');assert.equal((await p.evaluate(()=>JSON.parse(nutritionEditor.serialize()))).targets.kcal,null);
+ await p.getByLabel('Lipides (g)',{exact:true}).fill('-1');assert.match(await p.evaluate(()=>{try{nutritionEditor.serialize();return '';}catch(e){return e.message;}}),/Lipides/);
+ await p.close();
+});
+
+test('comparison deltas agree with the displayed rounded macro amounts',async()=>{
+ const p=await page();const plan={schema:'aa-nutrition-plan',version:1,targets:{protein_g:3.7,carbs_g:0,fat_g:0},meals:[{items:[{name:'Test',grams:100,per100g:{kcal:0,protein_g:3.75,carbs_g:0,fat_g:0}}]}]};
+ await p.evaluate(async plan=>modules.nutrition.mountNutritionBuilder(document.querySelector('#nutrition'),JSON.stringify(plan)),plan);
+ assert.equal(await p.locator('.nutrition-comparison__theory [data-metric=protein_g]').innerText(),'3,7');assert.equal(await p.locator('.nutrition-comparison__actual [data-metric=protein_g]').innerText(),'3,8');assert.equal(await p.locator('.nutrition-comparison__delta [data-metric=protein_g]').innerText(),'+0,1');await p.close();
 });
