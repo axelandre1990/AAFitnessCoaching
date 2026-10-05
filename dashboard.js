@@ -1,3 +1,16 @@
+import { mountTracking } from "./tracking.js?v=19";
+import { mountPhotos } from "./progress-photos.js?v=19";
+let trackingModules = [];
+async function loadTracking(target, photosTarget, clientId, coach, valid) {
+ const content=document.createElement('div'),photoContent=document.createElement('div');
+ const tracking = await mountTracking(content,clientId,{coach});
+ if (!valid()) { tracking.destroy(); return; }
+ target.replaceChildren(content); trackingModules.push(tracking);
+ const photos = await mountPhotos(photoContent,clientId,{coach,enabled:tracking.settings?.photos_enabled ?? true});
+ if (!valid()) { photos.destroy(); return; }
+ photosTarget.replaceChildren(photoContent); trackingModules.push(photos);
+}
+
 import {
   getClientHome,
   getCoachHome,
@@ -13,11 +26,11 @@ import {
   submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=18";
-import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=18";
+} from "./data.js?v=19";
+import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=19";
 
-import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=18";
-import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=18";
+import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=19";
+import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=19";
 let weeklyCheckin = null;
 let trainingBuilder = null;
 let detailRevision = 0;
@@ -128,6 +141,7 @@ async function loadProgressHistory(target, clientId, emptyCopy) {
 }
 
 async function loadClient(clientId) {
+ void loadTracking(document.querySelector("#client-daily-tracking"),document.querySelector("#client-progress-photos"),clientId,false,()=>activeRole==="client" && activeClientId===clientId);
   clientHistory.replaceChildren(element("p", "empty-state", "Chargement de ton suivi…"));
   try {
     const [checkIns, plan, identity, history] = await Promise.all([getClientHome(), getClientPlan(clientId), getCurrentProfile(), getTrainingHistory(clientId)]);
@@ -185,6 +199,8 @@ async function loadCoach() {
 
 async function showClientHistory(clientId, clientName, checkinDay = null) {
   const revision = ++detailRevision;
+ for (const module of trackingModules) module.destroy(); trackingModules=[];
+ void loadTracking(document.querySelector("#coach-daily-tracking"),document.querySelector("#coach-progress-photos"),clientId,true,()=>activeRole==="coach" && revision===detailRevision);
   selectedClient = { id: clientId, name: clientName, checkinDay };
   document.querySelector("#checkin-schedule-form").elements.weekday.value = checkinDay || "";
   announce(document.querySelector("#checkin-schedule-message"), "");
@@ -219,6 +235,8 @@ async function showClientHistory(clientId, clientName, checkinDay = null) {
 }
 
 export function unmountDashboard() {
+ for (const module of trackingModules) module.destroy(); trackingModules=[];
+ for (const id of ["client-daily-tracking","client-progress-photos","coach-daily-tracking","coach-progress-photos"]) document.getElementById(id).replaceChildren();
   ++detailRevision;
   weeklyCheckin = null; trainingBuilder = null;
   activeRole = null;
@@ -241,7 +259,7 @@ export function unmountDashboard() {
   coachProgress.replaceChildren();
   document.querySelector("#checkin-form").reset();
   document.querySelector("#invite-form").reset();
-  document.querySelector("#progress-form").reset();
+
   document.querySelector("#coach-plan-form").reset();
   activeClientId = null;
 }
@@ -295,27 +313,7 @@ document.querySelector("#checkin-schedule-form").addEventListener("submit", asyn
   finally{button.disabled=false;}
 });
 
-document.querySelector("#progress-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (activeRole !== "client") return;
-  const form = event.currentTarget;
-  const button = document.querySelector("#progress-submit");
-  const message = document.querySelector("#progress-message");
-  button.disabled = true;
-  button.textContent = "Enregistrement…";
-  announce(message, "Enregistrement de ta mesure…");
-  try {
-    await submitProgressEntry({ weightKg: form.elements.weight_kg.value, waistCm: form.elements.waist_cm.value, notes: form.elements.notes.value });
-    form.reset();
-    announce(message, "Ta mesure a été ajoutée à ta progression.", "success");
-    await loadProgressHistory(clientProgress, activeClientId, "Aucune mesure enregistrée pour le moment.");
-  } catch (error) {
-    announce(message, error.message, "error");
-  } finally {
-    button.disabled = false;
-    button.textContent = "Enregistrer ma mesure";
-  }
-});
+
 
 document.querySelector("#coach-plan-form").addEventListener("submit", async (event) => {
   event.preventDefault();

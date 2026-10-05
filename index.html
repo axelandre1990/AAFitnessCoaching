@@ -93,6 +93,7 @@
             <div class="dashboard-intro">
               <p class="eyebrow"><span class="eyebrow__line"></span> ESPACE CLIENT</p>
               <h2 id="dashboard-title">Ton suivi</h2>
+              <nav class="exercise-actions" aria-label="Suivi du client"><a class="text-action" href="#client-daily-tracking">Suivi journalier</a><a class="text-action" href="#client-progress-photos">Mes photos</a><a class="text-action" href="#checkin-title">Check-in hebdomadaire</a></nav>
               <p>Partage tes nouvelles avec ton coach et retrouve ses retours au même endroit.</p>
             </div>
             <div class="dashboard-grid dashboard-grid--client">
@@ -115,19 +116,8 @@
               <p class="programme-updated" id="client-plan-updated"></p>
             </section>
             <div class="dashboard-grid dashboard-grid--client progress-grid">
-              <section class="dashboard-card" aria-labelledby="progress-title">
-                <div class="card-heading"><div><p class="card-kicker">TA PROGRESSION</p><h3 id="progress-title">Nouvelle mesure</h3></div></div>
-                <p class="card-copy">Ajoute ton poids ou ton tour de taille pour suivre ton évolution avec ton coach.</p>
-                <form id="progress-form">
-                  <div class="measurement-fields">
-                    <label class="auth-field">Poids (kg)<input name="weight_kg" type="number" inputmode="decimal" min="20" max="400" step="0.1" placeholder="Ex. 72,5" /></label>
-                    <label class="auth-field">Tour de taille (cm)<input name="waist_cm" type="number" inputmode="decimal" min="30" max="250" step="0.5" placeholder="Ex. 84" /></label>
-                  </div>
-                  <label class="auth-field">Note (facultatif)<textarea name="notes" rows="3" maxlength="1000" placeholder="Comment te sens-tu ?"></textarea></label>
-                  <p class="inline-message" id="progress-message" role="status" aria-live="polite"></p>
-                  <button class="auth-primary dashboard-submit" id="progress-submit" type="submit">Enregistrer ma mesure</button>
-                </form>
-              </section>
+              <section class="dashboard-card" id="client-daily-tracking"></section>
+              <section class="dashboard-card" id="client-progress-photos"></section>
               <section class="dashboard-card" aria-labelledby="progress-history-title">
                 <div class="card-heading"><div><p class="card-kicker">TON HISTORIQUE</p><h3 id="progress-history-title">Mesures précédentes</h3></div></div>
                 <div class="progress-history" id="client-progress-history"><p class="empty-state">Chargement de ta progression…</p></div>
@@ -177,7 +167,7 @@
               <div class="dashboard-grid dashboard-grid--coach coach-client-tools">
                 <section class="dashboard-card" aria-labelledby="coach-plan-title">
                   <div class="card-heading"><div><p class="card-kicker">PROGRAMME CLIENT</p><h3 id="coach-plan-title">Nutrition et entraînement</h3></div></div>
-                  <nav class="exercise-actions" aria-label="Plans du client"><a class="text-action" href="#nutrition-builder">Plan alimentaire</a><a class="text-action" href="#training-builder">Plan d’entraînement</a></nav>
+                  <nav class="exercise-actions" aria-label="Plans du client"><a class="text-action" href="#nutrition-builder">Plan alimentaire</a><a class="text-action" href="#training-builder">Plan d’entraînement</a><a class="text-action" href="#coach-daily-tracking">Options de suivi</a><a class="text-action" href="#coach-progress-photos">Photos</a></nav>
                   <form id="coach-plan-form">
                   <div class="nutrition-builder" id="nutrition-builder" aria-live="polite">
                     <p class="empty-state">Chargement du constructeur nutrition…</p>
@@ -189,7 +179,7 @@
                 </section>
                 <section class="dashboard-card" aria-labelledby="coach-progress-title">
                   <div class="card-heading"><div><p class="card-kicker">SUIVI CORPOREL</p><h3 id="coach-progress-title">Progression</h3></div></div>
-                  <div id="coach-training-history"></div><div class="progress-history" id="coach-progress-history"><p class="empty-state">Chargement de la progression…</p></div>
+                  <div id="coach-daily-tracking"></div><div id="coach-progress-photos"></div><div id="coach-training-history"></div><div class="progress-history" id="coach-progress-history"><p class="empty-state">Chargement de la progression…</p></div>
                 </section>
               </div>
             </section>
@@ -222,7 +212,7 @@
       </form>
     </dialog>
 
-    <script type="module" src="./main.js?v=18"></script>
-    <script type="module" src="./auth.js?v=18"></script>
+    <script type="module" src="./main.js?v=19"></script>
+    <script type="module" src="./auth.js?v=19"></script>
   </body>
 </html>

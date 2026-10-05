@@ -1,0 +1,36 @@
+import {supabase} from './supabase.js?v=19';
+import {METRICS,DEFAULT_SETTINGS,todayBrussels,consumedCalories,validateMetrics} from './tracking-model.js?v=19';
+const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
+const single=data=>Array.isArray(data)?data[0]:data;
+async function query(q){const {data,error}=await q;if(error)throw Error(error.message);return data;}
+function field(form,name,label,type='number',min=0,max=2000,step=.1){const l=node('label',label,'auth-field'),i=node(type==='textarea'?'textarea':'input');i.name=name;if(type!=='textarea'){i.type=type;if(type==='number'){i.min=min;i.max=max;i.step=step;i.inputMode='decimal';}}else{i.maxLength=2000;i.rows=3;}l.append(i);form.append(l);return i;}
+function select(form,name,label,values){const l=node('label',label,'auth-field'),s=node('select');s.name=name;for(const [v,t]of values){const o=node('option',t);o.value=v;s.append(o);}l.append(s);form.append(l);return s;}
+function history(target,rows){target.replaceChildren(node('h4','Historique journalier'));if(!rows.length)target.append(node('p','Aucun suivi journalier enregistré.','empty-state'));for(const r of rows){const a=node('article',null,'progress-entry');a.append(node('strong',r.recorded_on));for(const [k,v]of Object.entries(r.metrics)){if(v===null||v==='')continue;let spec=METRICS.find(x=>x[0]===k);const labels={protein_g:'Protéines (g)',carbs_g:'Glucides (g)',fat_g:'Lipides (g)',fiber_g:'Fibres (g)',calories:'Calories (kcal)',bp_systolic:'Systolique (mmHg)',bp_diastolic:'Diastolique (mmHg)'};if(k==='glucose_unit')continue;const unit=k==='fasting_glucose'?(r.metrics.glucose_unit==='mmol_l'?'mmol/L':'mg/dL'):spec?.[2]||'';a.append(node('p',`${spec?.[1]||labels[k]||k} : ${k==='menstruation'?(v==='yes'?'Oui':'Non'):v} ${unit}`));}target.append(a);}}
+export async function mountTracking(target,clientId,{coach=false}={}){
+ let alive=true,settings=DEFAULT_SETTINGS,entry=null,loadRevision=0;
+ target.replaceChildren(node('p','Chargement du suivi journalier…'));const destroy=()=>{alive=false;loadRevision++;target.replaceChildren();};
+ try{
+ settings=await query(supabase.from('client_tracking_settings').select('*').eq('client_id',clientId).maybeSingle())||{...DEFAULT_SETTINGS};
+ let rows=await query(supabase.from('daily_tracking_entries').select('*').eq('client_id',clientId).order('recorded_on',{ascending:false}).limit(90))||[];
+ const form=node('form'),msg=node('p',null,'inline-message');msg.setAttribute('role','status');const list=node('div');
+ target.replaceChildren(node('h3',coach?'Options de suivi du client':'Mon suivi journalier'));
+ if(coach){target.append(node('p','Choisis les informations que ce client peut renseigner chaque jour. Les anciens relevés restent dans son historique.','card-copy'));
+ for(const [key,label]of [...METRICS.map(m=>[m[0],m[1]]),['macro_tracking','Macros via Cronometer'],['photos_enabled','Photos de progression']]){const l=node('label',null,'tracking-option'),i=node('input');i.type='checkbox';i.name=key;i.checked=key.endsWith('_tracking')||key==='photos_enabled'?settings[key]:settings.enabled_metrics.includes(key);l.append(i,document.createTextNode(label));form.append(l);}
+ const b=node('button','Enregistrer les options','auth-primary dashboard-submit');b.type='submit';form.append(msg,b);form.onsubmit=async e=>{e.preventDefault();b.disabled=true;try{const data=await query(supabase.rpc('aa_save_tracking_settings',{target_client:clientId,options:METRICS.filter(m=>form.elements[m[0]].checked).map(m=>m[0]),macros:form.elements.macro_tracking.checked,photos:form.elements.photos_enabled.checked,expected_revision:settings.revision}));if(!alive)return;settings=single(data);msg.textContent='Options enregistrées. Le client les retrouvera à sa prochaine ouverture.';}catch(e){if(alive)msg.textContent=e.message;}finally{if(alive)b.disabled=false;}};
+ }else{
+ const date=field(form,'recorded_on','Date du suivi','date');date.value=todayBrussels();date.max=todayBrussels();const lower=new Date(`${date.value}T12:00:00Z`);lower.setUTCDate(lower.getUTCDate()-730);date.min=lower.toISOString().slice(0,10);
+ const grid=node('div',null,'tracking-fields');form.append(grid);
+ for(const spec of METRICS.filter(m=>settings.enabled_metrics.includes(m[0]))){const [k,label,unit,min,max,step]=spec;
+ if(k==='blood_pressure'){field(grid,'bp_systolic','Pression systolique (mmHg)', 'number',0,350,1);field(grid,'bp_diastolic','Pression diastolique (mmHg)','number',0,350,1);}
+ else if(k==='menstruation')select(grid,k,label,[['','Non renseigné'],['yes','Oui'],['no','Non']]);
+ else{field(grid,k,`${label}${unit?' ('+unit+')':''}${unit==='/10'?' — 1 faible, 10 élevé':''}`,k==='notes'?'textarea':'number',min,max,step);if(k==='fasting_glucose')select(grid,'glucose_unit','Unité de glycémie',[['mg_dl','mg/dL'],['mmol_l','mmol/L']]);}}
+ let kcal;if(settings.macro_tracking){form.append(node('p','Reporte les totaux consommés de Cronometer. La saisie est manuelle.','card-copy'));for(const [k,l]of [['protein_g','Protéines (g)'],['carbs_g','Glucides (g)'],['fat_g','Lipides (g)'],['fiber_g','Fibres (g)']])field(grid,k,l);kcal=field(grid,'calories','Calories consommées — calcul 4P + 4G + 9L');kcal.readOnly=true;kcal.removeAttribute('max');}
+ const values=()=>{const m={};for(const i of grid.querySelectorAll('input,textarea,select'))if(i.name!=='calories')m[i.name]=i.value===''?null:i.type==='number'?Number(i.value):i.value;return m;};const update=()=>{if(kcal)kcal.value=consumedCalories(values())??'';};grid.addEventListener('input',update);
+ const b=node('button','Enregistrer mon suivi','auth-primary dashboard-submit');b.type='submit';form.append(msg,b);
+ const load=async()=>{const rev=++loadRevision;b.disabled=true;msg.textContent='Chargement…';try{const row=await query(supabase.from('daily_tracking_entries').select('*').eq('client_id',clientId).eq('recorded_on',date.value).maybeSingle());if(!alive||rev!==loadRevision)return;entry=row;for(const i of grid.querySelectorAll('input,textarea,select'))i.value=row?.metrics?.[i.name]??(i.name==='glucose_unit'?'mg_dl':'');update();msg.textContent=row?'Tu peux modifier le suivi de cette date.':'';b.disabled=false;}catch(e){if(alive&&rev===loadRevision)msg.textContent=e.message;}};
+ date.onchange=load;form.onsubmit=async e=>{e.preventDefault();b.disabled=true;date.disabled=true;try{const m=validateMetrics(values(),settings);const saved=await query(supabase.rpc('aa_save_daily',{day:date.value,values_json:m,expected_revision:entry?.revision||0,settings_revision:settings.revision}));if(!alive)return;entry=single(saved);rows=[entry,...rows.filter(r=>r.recorded_on!==entry.recorded_on)].sort((a,b)=>b.recorded_on.localeCompare(a.recorded_on));history(list,rows);msg.textContent='Suivi enregistré et partagé avec ton coach.';}catch(e){if(alive)msg.textContent=e.message;}finally{if(alive){b.disabled=false;date.disabled=false;}}};
+ target.append(form,list);history(list,rows);await load();return {destroy,settings};
+ }
+ target.append(form,list);history(list,rows);return {destroy,settings};
+ }catch(e){if(alive)target.replaceChildren(node('p',e.message,'inline-message'));return {destroy,settings};}
+}

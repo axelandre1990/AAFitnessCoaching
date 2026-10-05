@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js?v=18";
+import { supabase } from "./supabase.js?v=19";
 
 function throwIfError(error) {
   if (!error) return;
