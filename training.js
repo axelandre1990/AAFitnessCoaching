@@ -1,4 +1,4 @@
-import { parseTrainingPlan, validateTrainingPlan, validateWorkout } from './coaching-model.js?v=21';
+import { parseTrainingPlan, validateTrainingPlan, validateWorkout } from './coaching-model.js?v=22';
 const node=(tag,cls='',text='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
 const uid=()=>crypto.randomUUID();
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -66,25 +66,52 @@ export function renderTrainingHistory(target,sessions=[]) {
     for(const set of session.training_sets||[])details.append(node('p','',`${set.exercise_name} · série ${set.set_index} · ${set.reps} répétitions · ${set.load_kg==null?'poids du corps / charge non renseignée':`${set.load_kg} kg`}`));
     if(session.notes)details.append(node('p','',session.notes));target.append(details);}
 }
-export function renderClientTraining(target,value,{history=[],onSubmit}={}) {
+function exercisePreview(section, exercise) {
+  const media=node('div','exercise-media-row');
+  for(const [url,label] of [[exercise.image,'Ouvrir le GIF / l’image'],[exercise.video,'Voir la vidéo']]){const a=link(url,label);if(a)media.append(a);}
+  section.append(media);
+  try {
+    const url=new URL(exercise.image);if(url.protocol!=='https:')return;
+    const drive=url.hostname==='drive.google.com'&&url.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]+)(?:\/|$)/);
+    if(drive){const frame=node('iframe','exercise-preview');frame.src=`https://drive.google.com/file/d/${drive[1]}/preview`;frame.title=`Aperçu de ${exercise.name}`;frame.loading='lazy';frame.referrerPolicy='no-referrer';frame.setAttribute('allow','fullscreen');frame.setAttribute('sandbox','allow-scripts allow-same-origin');section.append(frame,node('p','card-copy','Si l’aperçu ne s’affiche pas, ouvre le média ou utilise la vidéo.'));}
+    else if(/\.(gif|png|jpe?g|webp)(?:$)/i.test(url.pathname)){const image=node('img','exercise-preview');image.src=url.href;image.alt=`Démonstration de ${exercise.name}`;image.loading='lazy';image.referrerPolicy='no-referrer';section.append(image);}
+  }catch { /* Video and media links remain available when no preview can be embedded. */ }
+}
+function previousSession(history,day) {
+  const ordered=[...history].sort((a,b)=>String(b.created_at||b.performed_on).localeCompare(String(a.created_at||a.performed_on)));
+  return ordered.find(session=>session.plan_day_id===day.id) || ordered.find(session=>!session.plan_day_id && (session.training_sets||[]).some(set=>day.exercises.some(ex=>set.exercise_item_id===ex.id||set.exercise_id===ex.exerciseId)));
+}
+export function renderClientTraining(target,value,{history=[],onSubmit,openDay=null}={}) {
   target.replaceChildren();const {plan,legacy}=parseTrainingPlan(value);
   if(!plan){target.append(node('p','',legacy||'Ton coach n’a pas encore ajouté de programme d’entraînement.'));return;}
+  let latestHistory=[...history];
   target.append(node('h4','',plan.name),node('p','card-copy',plan.mode==='rotation'?'Enchaîne les séances dans l’ordre de la rotation.':'Tes séances de la semaine.'));if(plan.notes)target.append(node('p','',plan.notes));
-  for(const day of plan.days){const details=node('details','client-session');details.append(node('summary','',`${day.name} · ${day.exercises.length} exercices`));
+  for(const day of plan.days){const details=node('details','client-session');details.open=day.id===openDay;details.append(node('summary','',`${day.name} · ${day.exercises.length} exercices`));
     if(!day.exercises.length){details.append(node('p','empty-state','Repos ou séance à compléter par le coach.'));target.append(details);continue;}
+    const previous=previousSession(latestHistory,day);
     const form=node('form','workout-form');const requestId=uid();
+    if(previous)form.append(node('p','last-performance',`Résultats à battre — dernière séance du ${previous.performed_on}`));
     const inputs=[];
     for(const ex of day.exercises){const section=node('section','training-exercise');section.append(node('h4','',ex.name),node('p','card-copy',`${ex.sets} séries · ${ex.repsMin}–${ex.repsMax} répétitions · repos ${ex.restSeconds} s${ex.targetLoadKg!=null?` · cible ${ex.targetLoadKg} kg`:''}${ex.rir!=null?` · RIR ${ex.rir}`:''}${ex.tempo?` · tempo ${ex.tempo}`:''}`));
-      const media=node('div','exercise-media-row');for(const [url,label] of [[ex.image,'Image / animation'],[ex.video,'Vidéo']]){const a=link(url,label);if(a)media.append(a);}section.append(media);if(ex.notes)section.append(node('p','',ex.notes));
-      const previous=history.flatMap(s=>[...(s.training_sets||[])].reverse().map(set=>({...set,date:s.performed_on}))).find(s=>s.exercise_id===ex.exerciseId);if(previous)section.append(node('p','last-performance',`Dernière série enregistrée (${previous.date}) : ${previous.reps} répétitions${previous.load_kg==null?'':` à ${previous.load_kg} kg`}`));
+      exercisePreview(section,ex);if(ex.notes)section.append(node('p','',ex.notes));
+      const priorSets=previous?.training_sets||[];
+      const matching=priorSets.some(set=>set.exercise_item_id===ex.id)?priorSets.filter(set=>set.exercise_item_id===ex.id):priorSets.filter(set=>set.exercise_id===ex.exerciseId);
       section.append(node('p','card-copy','Coche les séries réalisées et indique tes répétitions. Laisse la charge vide pour un exercice au poids du corps.'));
       for(let i=1;i<=Number(ex.sets);i++){const row=node('div','workout-set');const done=node('label','set-done',`Série ${i}`),check=node('input');check.type='checkbox';check.setAttribute('aria-label',`${ex.name} série ${i} réalisée`);done.append(check);
-        const reps=field('Répétitions','',()=>{},{type:'number',min:1,max:200}),load=field('Charge (kg)','',()=>{},{type:'number',min:0,max:1000,step:'0.01'});row.append(done,reps,load);section.append(row);inputs.push({ex,index:i,check,reps:reps.querySelector('input'),load:load.querySelector('input')});}
+        const reps=field('Répétitions','',()=>{},{type:'number',min:1,max:200}),load=field('Charge (kg)','',()=>{},{type:'number',min:0,max:1000,step:'0.01'});row.append(done,reps,load);
+        const prior=matching.find(set=>set.set_index===i);row.append(node('p','set-previous',prior?`Dernière séance · série ${i} : ${prior.reps} répétitions · ${prior.load_kg==null?'poids du corps / charge non renseignée':`${prior.load_kg} kg`}`:'Aucun résultat précédent pour cette série.'));
+        section.append(row);inputs.push({ex,index:i,check,reps:reps.querySelector('input'),load:load.querySelector('input')});}
       form.append(section);
     }
-    const notes=field('Note de séance (facultatif)','',()=>{});notes.querySelector('input').maxLength=2000;
+    const notes=node('label','auth-field','Note de séance (facultatif)'),noteInput=node('textarea');noteInput.rows=3;noteInput.maxLength=2000;noteInput.placeholder='Ressenti, difficulté, douleurs ou commentaire pour ton coach…';notes.append(noteInput);
     const message=node('p','inline-message');message.setAttribute('role','status');const save=node('button','auth-primary','Enregistrer cette séance');save.type='submit';form.append(notes,message,save);
-    form.onsubmit=async event=>{event.preventDefault();const logs=inputs.filter(i=>i.check.checked).map(i=>({item_id:i.ex.id,set_index:i.index,reps:i.reps.value===''?'':Number(i.reps.value),load_kg:i.load.value===''?null:Number(i.load.value)}));const errors=validateWorkout(logs);if(errors.length){message.className='inline-message inline-message--error';message.textContent=errors[0];return;}save.disabled=true;message.textContent='Enregistrement…';try{await onSubmit(day.id,logs,notes.querySelector('input').value,requestId);message.className='inline-message inline-message--success';message.textContent='Séance enregistrée. Ton coach peut consulter tes charges et répétitions.';save.textContent='Séance enregistrée';for(const i of form.querySelectorAll('input'))i.disabled=true;}catch(e){message.className='inline-message inline-message--error';message.textContent=e.message;save.disabled=false;}};
+    form.onsubmit=async event=>{event.preventDefault();const logs=inputs.filter(i=>i.check.checked).map(i=>({item_id:i.ex.id,set_index:i.index,reps:i.reps.value===''?'':Number(i.reps.value),load_kg:i.load.value===''?null:Number(i.load.value)}));const errors=validateWorkout(logs);if(errors.length){message.className='inline-message inline-message--error';message.textContent=errors[0];return;}save.disabled=true;noteInput.disabled=true;message.textContent='Enregistrement…';try{
+      const updated=await onSubmit(day.id,logs,noteInput.value,requestId);
+      if(Array.isArray(updated))latestHistory=updated;
+      else latestHistory=[{id:requestId,plan_day_id:day.id,performed_on:new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Brussels'}).format(new Date()),created_at:new Date().toISOString(),training_sets:logs.map(log=>{const ex=day.exercises.find(ex=>ex.id===log.item_id);return {...log,exercise_item_id:ex.id,exercise_id:ex.exerciseId,exercise_name:ex.name};})},...latestHistory];
+      message.className='inline-message inline-message--success';message.textContent='Séance enregistrée. Ton coach peut consulter tes charges, répétitions et ta note.';save.textContent='Séance enregistrée';for(const i of form.querySelectorAll('input,textarea'))i.disabled=true;
+      const restart=node('button','auth-secondary','Commencer une nouvelle séance');restart.type='button';restart.onclick=()=>renderClientTraining(target,value,{history:latestHistory,onSubmit,openDay:day.id});form.append(restart);
+    }catch(e){message.className='inline-message inline-message--error';message.textContent=e.message;save.disabled=false;noteInput.disabled=false;}};
     details.append(form);target.append(details);
   }
 }

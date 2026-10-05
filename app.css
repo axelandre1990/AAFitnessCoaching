@@ -434,3 +434,5 @@ h1 span { color: #a1aaa7; }
 .photo-grid figcaption { margin:8px 0; }
 #coach-daily-tracking,#coach-progress-photos { margin-bottom:32px; padding-bottom:24px; border-bottom:1px solid #26332f; }
 @media(max-width:520px){.photo-grid{grid-template-columns:1fr}.photo-grid img{height:320px}}
+
+.exercise-preview{display:block;width:min(100%,320px);height:210px;border:1px solid var(--color-border);border-radius:12px;object-fit:contain;background:#111414;margin:12px 0}.set-previous{grid-column:1/-1;color:var(--color-accent);font-size:.85rem;margin:0 0 8px}.tracking-note-help{grid-column:1/-1;}

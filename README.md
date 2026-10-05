@@ -95,3 +95,9 @@ Migration 20261005162045_daily_tracking_photos.sql appliquée. Les tests SQL V6 
 ## v20 — filtre de base alimentaire
 
 Le sélecteur « Base alimentaire pour la recherche » permet de chercher dans Ma base personnelle AA (181 aliments), Ciqual 2025, toutes les bases USDA, chaque jeu USDA individuellement, ou toutes les bases. Le choix s’applique aux six repas et est mémorisé localement sur le navigateur. Il ne modifie pas les aliments déjà ajoutés au plan.
+
+## v22 — séance client et notes
+
+Pendant la saisie des performances, chaque exercice affiche un aperçu de son image/animation (aperçu Google Drive pour les liens Drive, image directe si disponible) et les liens vers son média et sa vidéo. La disponibilité des médias dépend du partage des fichiers d’origine. Les charges et répétitions de chaque série de la dernière séance du même programme sont affichées séparément des nouveaux champs de saisie. La dernière séance de chaque jour du plan est récupérée même lorsqu’elle sort de l’historique récent de vingt séances. La note de séance facultative est multiligne, sauvegardée et lisible par le coach. Après sauvegarde, « Commencer une nouvelle séance » ouvre un formulaire vide avec les nouveaux résultats précédents.
+
+Le suivi journalier affiche sous sa note de contexte les exemples fournis par le coach : menstruations, insomnie, maladies, craquages, cheat meal, entraînements réalisés, baisse de performances et stress. Le suivi des notes doit être activé dans les options du client (activé par défaut). Aucune nouvelle migration.

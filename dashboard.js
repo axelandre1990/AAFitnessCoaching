@@ -1,5 +1,6 @@
-import { mountTracking } from "./tracking.js?v=21";
-import { mountPhotos } from "./progress-photos.js?v=21";
+import { parseTrainingPlan } from "./coaching-model.js?v=22";
+import { mountTracking } from "./tracking.js?v=22";
+import { mountPhotos } from "./progress-photos.js?v=22";
 let trackingModules = [];
 async function loadTracking(target, photosTarget, clientId, coach, valid) {
  const content=document.createElement('div'),photoContent=document.createElement('div');
@@ -22,15 +23,16 @@ import {
   submitWeeklyCheckIn,
   setCheckinDay,
   getTrainingHistory,
+  getLatestTrainingSessions,
   submitTrainingSession,
   submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=21";
-import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=21";
+} from "./data.js?v=22";
+import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=22";
 
-import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=21";
-import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=21";
+import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=22";
+import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=22";
 let weeklyCheckin = null;
 let trainingBuilder = null;
 let detailRevision = 0;
@@ -154,10 +156,15 @@ async function loadClient(clientId) {
       for (const checkIn of checkIns) clientHistory.append(renderCheckIn(checkIn));
     }
     renderClientNutrition(document.querySelector("#client-nutrition-plan"), plan?.nutrition_plan || "");
-    renderClientTraining(document.querySelector("#client-training-plan"), plan?.training_plan || "", {history, onSubmit: async (dayId, logs, notes, requestId) => {
+    const planDays = parseTrainingPlan(plan?.training_plan || "").plan?.days || [];
+    const latest = await getLatestTrainingSessions(clientId, planDays.map(day=>day.id));
+    if (activeRole !== "client" || activeClientId !== clientId) return;
+    const referenceHistory = [...new Map([...latest, ...history].map(session=>[session.id,session])).values()];
+    renderClientTraining(document.querySelector("#client-training-plan"), plan?.training_plan || "", {history:referenceHistory, onSubmit: async (dayId, logs, notes, requestId) => {
       await submitTrainingSession(dayId, logs, notes, requestId);
       const updated = await getTrainingHistory(clientId);
       if (activeClientId === clientId) renderTrainingHistory(document.querySelector("#client-training-history"), updated);
+      return [...new Map([...referenceHistory, ...updated].map(session=>[session.id,session])).values()];
     }});
     renderTrainingHistory(document.querySelector("#client-training-history"), history);
     document.querySelector("#client-plan-updated").textContent = plan?.updated_at ? `Mis à jour le ${dateLabel(plan.updated_at)}` : "Ton programme apparaîtra ici dès que ton coach l’aura préparé.";

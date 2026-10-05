@@ -1,5 +1,5 @@
-import {supabase} from './supabase.js?v=21';
-import {METRICS,DEFAULT_SETTINGS,todayBrussels,consumedCalories,validateMetrics} from './tracking-model.js?v=21';
+import {supabase} from './supabase.js?v=22';
+import {METRICS,DEFAULT_SETTINGS,todayBrussels,consumedCalories,validateMetrics} from './tracking-model.js?v=22';
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
 const single=data=>Array.isArray(data)?data[0]:data;
 async function query(q){const {data,error}=await q;if(error)throw Error(error.message);return data;}
@@ -23,7 +23,7 @@ export async function mountTracking(target,clientId,{coach=false}={}){
  for(const spec of METRICS.filter(m=>settings.enabled_metrics.includes(m[0]))){const [k,label,unit,min,max,step]=spec;
  if(k==='blood_pressure'){field(grid,'bp_systolic','Pression systolique (mmHg)', 'number',0,350,1);field(grid,'bp_diastolic','Pression diastolique (mmHg)','number',0,350,1);}
  else if(k==='menstruation')select(grid,k,label,[['','Non renseigné'],['yes','Oui'],['no','Non']]);
- else{field(grid,k,`${label}${unit?' ('+unit+')':''}${unit==='/10'?' — 1 faible, 10 élevé':''}`,k==='notes'?'textarea':'number',min,max,step);if(k==='fasting_glucose')select(grid,'glucose_unit','Unité de glycémie',[['mg_dl','mg/dL'],['mmol_l','mmol/L']]);}}
+ else{field(grid,k,`${label}${unit?' ('+unit+')':''}${unit==='/10'?' — 1 faible, 10 élevé':''}`,k==='notes'?'textarea':'number',min,max,step);if(k==='fasting_glucose')select(grid,'glucose_unit','Unité de glycémie',[['mg_dl','mg/dL'],['mmol_l','mmol/L']]);if(k==='notes'){const textarea=grid.querySelector('[name=notes]');textarea.placeholder='Contexte de ta journée (facultatif)…';const help=node('p','👉 Note : Indique ici toutes les informations pouvant influencer ta progression (menstruations, insomnie, maladies, craquages, cheat meal, entraînements réalisés, baisse de performances, stress, etc.). Cela me permet de comprendre le contexte et d’analyser au mieux ton suivi.','card-copy tracking-note-help');help.id='daily-context-note-help';textarea.setAttribute('aria-describedby',help.id);grid.append(help);}}}
  let kcal;if(settings.macro_tracking){form.append(node('p','Reporte les totaux consommés de Cronometer. La saisie est manuelle.','card-copy'));for(const [k,l]of [['protein_g','Protéines (g)'],['carbs_g','Glucides (g)'],['fat_g','Lipides (g)'],['fiber_g','Fibres (g)']])field(grid,k,l);kcal=field(grid,'calories','Calories consommées — calcul 4P + 4G + 9L');kcal.readOnly=true;kcal.removeAttribute('max');}
  const values=()=>{const m={};for(const i of grid.querySelectorAll('input,textarea,select'))if(i.name!=='calories')m[i.name]=i.value===''?null:i.type==='number'?Number(i.value):i.value;return m;};const update=()=>{if(kcal)kcal.value=consumedCalories(values())??'';};grid.addEventListener('input',update);
  const b=node('button','Enregistrer mon suivi','auth-primary dashboard-submit');b.type='submit';form.append(msg,b);

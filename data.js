@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js?v=21";
+import { supabase } from "./supabase.js?v=22";
 
 function throwIfError(error) {
   if (!error) return;
@@ -199,10 +199,18 @@ export async function submitWeeklyCheckIn(answers) {
   const {data,error}=await supabase.rpc("aa_submit_weekly_check_in",{response_answers:answers,form_version:1});throwIfError(error);return data;
 }
 export async function getTrainingHistory(clientId) {
-  const {data,error}=await supabase.from("training_sessions").select("id, session_name, performed_on, notes, created_at, training_sets(exercise_item_id, exercise_id, exercise_name, exercise_order, set_index, reps, load_kg)").eq("client_id",clientId).order("created_at",{ascending:false}).limit(20);
+  const {data,error}=await supabase.from("training_sessions").select("id, plan_day_id, session_name, performed_on, notes, created_at, training_sets(exercise_item_id, exercise_id, exercise_name, exercise_order, set_index, reps, load_kg)").eq("client_id",clientId).order("created_at",{ascending:false}).limit(20);
   throwIfError(error);
   return (data||[]).map(session=>({...session,training_sets:(session.training_sets||[]).sort((a,b)=>a.exercise_order-b.exercise_order||a.set_index-b.set_index)}));
 }
 export async function submitTrainingSession(dayId, logs, notes, requestId) {
   const {data,error}=await supabase.rpc("aa_submit_training_session",{day_id:dayId,completed_sets:logs,session_notes:notes,client_request_id:requestId});throwIfError(error);return data;
+}
+
+export async function getLatestTrainingSessions(clientId, dayIds) {
+  const rows = await Promise.all([...new Set(dayIds)].slice(0,14).map(async dayId => {
+    const {data,error}=await supabase.from("training_sessions").select("id, plan_day_id, session_name, performed_on, notes, created_at, training_sets(exercise_item_id, exercise_id, exercise_name, exercise_order, set_index, reps, load_kg)").eq("client_id",clientId).eq("plan_day_id",dayId).order("created_at",{ascending:false}).limit(1);
+    throwIfError(error); return data?.[0] || null;
+  }));
+  return rows.filter(Boolean);
 }
