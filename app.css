@@ -408,3 +408,19 @@ h1 span { color: #a1aaa7; }
  .training-exercise,.weekly-section,.client-session {padding:14px;}
  .training-days button {font-size:.85rem; padding:10px 12px;}
 }
+
+.nutrition-target input[readonly] { background:#80d9cf0c; border-color:#80d9cf60; color:#80D9CF; font-weight:600; }
+.nutrition-calorie-note,.nutrition-comparison__note { color:#a9beb9; font-size:.85rem; line-height:1.6; }
+.nutrition-comparison { overflow-x:auto; margin:20px 0; padding:12px; border:1px solid #ffffff20; border-radius:16px; background:#ffffff03; }
+.nutrition-comparison__table { border-collapse:collapse; width:100%; min-width:560px; font-size:.9rem; }
+.nutrition-comparison__table caption { text-align:left; font-weight:600; color:#edf4f2; padding:8px 0 16px; }
+.nutrition-comparison__table th,.nutrition-comparison__table td { padding:12px 10px; border-bottom:1px solid #ffffff15; text-align:right; }
+.nutrition-comparison__table th:first-child { text-align:left; }
+.nutrition-comparison__table thead th { color:#a9beb9; font-size:.78rem; font-weight:500; }
+.nutrition-comparison__theory { color:#a8c7c1; }
+.nutrition-comparison__actual { color:#80D9CF; font-weight:600; background:#80d9cf07; }
+.nutrition-comparison__delta { font-size:.85rem; }
+.nutrition-comparison__delta [data-state=match] { color:#80D9CF; }
+.nutrition-comparison__delta [data-state=over],.nutrition-comparison__delta [data-state=under] { color:#f0c38b; }
+.nutrition-comparison__note { min-width:240px; margin:14px 0 0; }
+.client-nutrition-daily { color:#80D9CF; padding:16px; background:#80d9cf08; border:1px solid #80d9cf30; border-radius:12px; line-height:1.6; }

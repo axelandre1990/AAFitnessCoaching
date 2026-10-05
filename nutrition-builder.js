@@ -2,6 +2,14 @@ const FORMAT = new Intl.NumberFormat("fr-BE", { maximumFractionDigits: 1 });
 const MEAL_COUNT = 6;
 const SOURCE_RANK = { AA_CUSTOM: 0, CIQUAL_2025: 1, USDA_FOUNDATION_2026: 2, USDA_FNDDS_2021_2023: 3, USDA_SR_LEGACY_2018: 4 };
 let catalogPromise;
+const MACRO_KEYS = ["protein_g", "carbs_g", "fat_g"];
+const hasValue = value => value !== null && value !== undefined && value !== "";
+
+export function macroCalories(macros = {}) {
+  const values = MACRO_KEYS.map(key => hasValue(macros[key]) ? Number(macros[key]) : 0);
+  if (values.some(value => !Number.isFinite(value) || value < 0)) return null;
+  return Number((values[0] * 4 + values[1] * 4 + values[2] * 9).toFixed(2));
+}
 
 function node(tag, className = "", text = "") {
   const result = document.createElement(tag);
@@ -28,15 +36,15 @@ function normalize(value) {
 }
 
 function nutrientsFor(food, grams) {
-  const scale = Number(grams || 0) / 100;
+  const scale = Number.isFinite(Number(grams)) ? Math.max(0, Number(grams)) / 100 : 0;
   const base = food.per100g || {};
-  return {
-    kcal: Number(base.kcal || 0) * scale,
+  const nutrients = {
     protein_g: Number(base.protein_g || 0) * scale,
     carbs_g: Number(base.carbs_g || 0) * scale,
     fat_g: Number(base.fat_g || 0) * scale,
     fiber_g: base.fiber_g == null ? null : Number(base.fiber_g) * scale
   };
+  return { ...nutrients, kcal: macroCalories(nutrients) ?? 0 };
 }
 
 function addNutrients(total, contribution) {
@@ -44,11 +52,48 @@ function addNutrients(total, contribution) {
   if (contribution.fiber_g != null) {
     total.fiber_g += contribution.fiber_g;
     total.fiber_count += 1;
-  }
+  } else total.fiber_missing = true;
 }
 
 function emptyTotals() {
-  return { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0, fiber_count: 0 };
+  return { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0, fiber_count: 0, fiber_missing: false };
+}
+
+export function dailyTotals(meals = []) {
+  const totals = emptyTotals();
+  for (const meal of meals) for (const item of meal.items || []) addNutrients(totals, nutrientsFor(item, item.grams));
+  totals.kcal = macroCalories(totals) ?? 0;
+  return totals;
+}
+
+function renderComparison(container, targets, meals) {
+  const actual = dailyTotals(meals);
+  const columns = [["kcal", "Calories (kcal)", 1], ["protein_g", "Protéines (g)", 1], ["carbs_g", "Glucides (g)", 1], ["fat_g", "Lipides (g)", 1], ["fiber_g", "Fibres (g)", 1]];
+  const table = node("table", "nutrition-comparison__table");
+  table.append(node("caption", "", "Comparaison journalière"));
+  const head = node("thead"), header = node("tr");
+  header.append(node("th", "", "Repères"));
+  for (const [, label] of columns) { const th = node("th", "", label); th.scope = "col"; header.append(th); }
+  head.append(header); table.append(head);
+  const body = node("tbody");
+  for (const [type, label] of [["theory", "Théorique"], ["actual", "Plan actuel"], ["delta", "Écart"]]) {
+    const row = node("tr", `nutrition-comparison__${type}`), heading = node("th", "", label); heading.scope = "row"; row.append(heading);
+    for (const [key, , precision] of columns) {
+      const goal = hasValue(targets[key]) && Number.isFinite(Number(targets[key])) ? Number(targets[key]) : null;
+      let value = type === "theory" ? goal : type === "actual" ? actual[key] : goal === null ? null : actual[key] - goal;
+      if (key === "fiber_g" && type !== "theory" && actual.fiber_missing && (!actual.fiber_count || type === "delta")) value = null;
+      const cell = node("td"); cell.dataset.metric = key; cell.dataset.value = value === null ? "" : String(value);
+      let rounded = value === null ? null : Number(value.toFixed(precision));
+      if (type === "delta" && rounded !== null) rounded = Number((Number(actual[key].toFixed(precision)) - Number(goal.toFixed(precision))).toFixed(precision));
+      cell.textContent = rounded === null ? "—" : `${type === "delta" && rounded > 0 ? "+" : ""}${FORMAT.format(rounded === 0 ? 0 : rounded)}`;
+      if (key === "fiber_g" && type === "actual" && actual.fiber_missing && actual.fiber_count) cell.textContent += " (partiel)";
+      if (type === "delta") cell.dataset.state = rounded === null ? "unset" : rounded === 0 ? "match" : rounded > 0 ? "over" : "under";
+      row.append(cell);
+    }
+    body.append(row);
+  }
+  table.append(body);
+  container.replaceChildren(table, node("p", "nutrition-comparison__note", "Écart = plan actuel − objectif, sur les valeurs affichées. Calories du plan calculées avec 4 × protéines + 4 × glucides + 9 × lipides. Les fibres ne participent pas à ce calcul ; leurs données manquantes sont signalées."));
 }
 
 function sourceNote(className) {
@@ -67,7 +112,7 @@ function sourceNote(className) {
 
 function totalsLabel(totals) {
   const fiber = totals.fiber_count ? `${FORMAT.format(totals.fiber_g)} g fibres` : "fibres n.d.";
-  return `${Math.round(totals.kcal)} kcal · P ${FORMAT.format(totals.protein_g)} g · G ${FORMAT.format(totals.carbs_g)} g · L ${FORMAT.format(totals.fat_g)} g · ${fiber}`;
+  return `${Math.round(macroCalories(totals) ?? 0)} kcal · P ${FORMAT.format(totals.protein_g)} g · G ${FORMAT.format(totals.carbs_g)} g · L ${FORMAT.format(totals.fat_g)} g · ${fiber}${totals.fiber_missing && totals.fiber_count ? " (partiel)" : ""}`;
 }
 
 async function loadCatalog() {
@@ -135,10 +180,15 @@ export async function mountNutritionBuilder(container, savedValue = "") {
     return null;
   }
 
-  const targetsHeading = node("p", "card-kicker", "OBJECTIFS JOURNALIERS");
+  const targetsHeading = node("p", "card-kicker", "OBJECTIFS THÉORIQUES JOURNALIERS");
   const targets = node("div", "nutrition-targets");
+  let macrosChanged = false;
+  const preserveLegacyCalories = hasValue(saved.targets?.kcal) && !MACRO_KEYS.every(key => hasValue(saved.targets?.[key]));
+  const comparison = node("div", "nutrition-comparison");
+  comparison.setAttribute("role", "region"); comparison.setAttribute("aria-label", "Comparaison des objectifs et du plan alimentaire"); comparison.tabIndex = 0;
+  const formulaNote = node("p", "nutrition-calorie-note");
   const targetFields = [
-    ["Calories (kcal)", "kcal", "1"],
+    ["Calories théoriques (kcal)", "kcal", "0.1"],
     ["Protéines (g)", "protein_g", "0.1"],
     ["Glucides (g)", "carbs_g", "0.1"],
     ["Lipides (g)", "fat_g", "0.1"],
@@ -147,9 +197,26 @@ export async function mountNutritionBuilder(container, savedValue = "") {
   for (const [label, key, step] of targetFields) {
     const fieldNode = field(label, key, "number", step);
     fieldNode.querySelector("input").value = state.targets[key] ?? "";
-    fieldNode.querySelector("input").addEventListener("input", (event) => { state.targets[key] = event.currentTarget.value; });
+    if (key === "kcal") {
+      fieldNode.querySelector("input").readOnly = true;
+      fieldNode.querySelector("input").placeholder = "Calcul automatique";
+    } else fieldNode.querySelector("input").addEventListener("input", (event) => {
+      state.targets[key] = event.currentTarget.value;
+      if (MACRO_KEYS.includes(key)) macrosChanged = true;
+      refreshDaily();
+    });
     targets.append(fieldNode);
   }
+  const refreshDaily = () => {
+    const keepLegacy = preserveLegacyCalories && !macrosChanged;
+    const anyMacro = MACRO_KEYS.some(key => hasValue(state.targets[key]));
+    state.targets.kcal = keepLegacy ? saved.targets.kcal : anyMacro ? macroCalories(state.targets) : null;
+    targets.querySelector('input[name="kcal"]').value = state.targets.kcal ?? "";
+    formulaNote.textContent = keepLegacy
+      ? "Objectif calorique antérieur conservé. Dès que tu modifies les macros, les calories sont recalculées automatiquement avec la formule 4 / 4 / 9."
+      : "Calories automatiques : 4 kcal/g de protéines + 4 kcal/g de glucides + 9 kcal/g de lipides. Renseigne les macros ci-dessus ; le total se calcule tout seul.";
+    renderComparison(comparison, state.targets, state.meals);
+  };
 
   const notesLabel = node("label", "auth-field", "Consignes, préférences et suppléments");
   const notesInput = node("textarea");
@@ -191,6 +258,7 @@ export async function mountNutritionBuilder(container, savedValue = "") {
         mealEl.querySelector(".nutrition-meal__totals").textContent = totalsLabel(meal.items.reduce((sum, current) => {
           addNutrients(sum, nutrientsFor(current, current.grams)); return sum;
         }, emptyTotals()));
+        refreshDaily();
       });
       amountLabel.append(amount);
       const line = nutrientsFor(item, item.grams);
@@ -201,6 +269,7 @@ export async function mountNutritionBuilder(container, savedValue = "") {
       row.append(name, amountLabel, macros, remove);
       itemList.append(row);
     }
+    refreshDaily();
   };
 
   for (const [index, meal] of state.meals.entries()) {
@@ -275,7 +344,8 @@ export async function mountNutritionBuilder(container, savedValue = "") {
     refreshMeal(index);
   }
 
-  container.replaceChildren(targetsHeading, targets, sourceNote("nutrition-source-note"), notesLabel, node("p", "card-kicker nutrition-meals__title", "COMPOSITION DES REPAS"), mealsWrap);
+  refreshDaily();
+  container.replaceChildren(targetsHeading, targets, formulaNote, comparison, sourceNote("nutrition-source-note"), notesLabel, node("p", "card-kicker nutrition-meals__title", "COMPOSITION DES REPAS"), mealsWrap);
   container.onclick = (event) => {
     const section = event.target.closest(".nutrition-meal");
     if (!section) return;
@@ -309,10 +379,14 @@ export async function mountNutritionBuilder(container, savedValue = "") {
 
   return {
     serialize() {
+      for (const [key, value] of Object.entries(state.targets)) {
+        if (hasValue(value) && (!Number.isFinite(Number(value)) || Number(value) < 0)) throw new Error(`Vérifie l’objectif ${targetFields.find(field => field[1] === key)?.[0] || key} : indique un nombre positif ou zéro.`);
+      }
+      refreshDaily();
       return JSON.stringify({
         schema: "aa-nutrition-plan",
         version: 1,
-        targets: Object.fromEntries(Object.entries(state.targets).map(([key, value]) => [key, value === "" ? null : Number(value)])),
+        targets: Object.fromEntries(Object.entries(state.targets).map(([key, value]) => [key, !hasValue(value) ? null : Number(value)])),
         notes: state.notes.trim(),
         meals: state.meals.map((meal) => ({
           name: meal.name.trim() || "Repas",
@@ -333,7 +407,7 @@ export function renderClientNutrition(target, savedValue) {
   }
   const plan = parsed.structured;
   const targetList = [
-    ["Calories", plan.targets?.kcal, "kcal"],
+    ["Calories", MACRO_KEYS.every(key => hasValue(plan.targets?.[key])) ? macroCalories(plan.targets) : plan.targets?.kcal, "kcal"],
     ["Protéines", plan.targets?.protein_g, "g"],
     ["Glucides", plan.targets?.carbs_g, "g"],
     ["Lipides", plan.targets?.fat_g, "g"],
@@ -345,6 +419,7 @@ export function renderClientNutrition(target, savedValue) {
     target.append(targets);
   }
   if (plan.notes) target.append(node("p", "programme-copy__notes", plan.notes));
+  if (plan.meals.some(meal => meal.items?.length)) target.append(node("p", "client-nutrition-daily", `Total du plan par jour (4 / 4 / 9) : ${totalsLabel(dailyTotals(plan.meals))}`));
   const meals = node("div", "client-nutrition-meals");
   let hasItems = false;
   for (const meal of plan.meals) {

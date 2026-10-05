@@ -1,4 +1,4 @@
-# AAFitnessCoaching V5
+# AAFitnessCoaching V5.1
 
 Application web progressive, en français et conçue d’abord pour mobile. Les V2 et V3 fournissent une authentification e-mail, les espaces client et coach, les invitations, les check-ins et retours, les programmes par client et le suivi de mesures. V4 ajoute au coach un constructeur de plans alimentaires structurés, une recherche alimentaire et des totaux calculés par repas. V5 ajoute le constructeur d’entraînement, les séries réalisées et le questionnaire hebdomadaire avec un jour choisi par le coach. L’application utilise Supabase Auth et Postgres avec Row Level Security ; l’interface ne remplace jamais les contrôles d’accès de la base.
 
@@ -74,3 +74,12 @@ Les RPC imposent le rôle client pour l’envoi et l’affectation coach pour le
 `node --test tests/*.test.mjs` depuis le dossier source. Les tests de données et de modèles utilisent Node natif ; les tests navigateur utilisent Playwright et Chromium du runtime Codex installé. Le navigateur charge un serveur local et n’envoie aucune donnée client à Supabase. Les vérifications SQL de sécurité sont transactionnelles et terminent par ROLLBACK.
 
 Notifications et rappels automatiques, graphiques de charges, méthodes avancées de séries et nouvelle bibliothèque GIF restent des évolutions.
+
+
+## V5.1 — objectifs macros et comparaison du plan
+
+Le coach saisit les protéines, glucides et lipides théoriques. Les calories sont en lecture seule et calculées automatiquement : 4 × protéines + 4 × glucides + 9 × lipides. Une comparaison journalière affiche les objectifs théoriques, le plan actuel (ensemble des six repas) et leurs écarts. L’ajout ou retrait d’un aliment, les portions et les objectifs actualisent immédiatement le tableau. Les calories affichées pour les portions et le plan suivent également 4 / 4 / 9 ; les valeurs énergétiques d’origine restent conservées dans les données alimentaires. Les objectifs calorifiques antérieurs avec macros incomplètes sont conservés jusqu’à la modification des macros.
+
+La bibliothèque entraînement propose aussi une liste déroulante de sélection. La recherche, les filtres muscle/matériel et l’ouverture de la bibliothèque sont conservés pendant l’ajout successif d’exercices. Aucune nouvelle migration Supabase n’est nécessaire pour cette version : les calories calculées sont sauvegardées dans le champ de plan existant.
+
+Ouvrir la version actualisée : https://axelandre1990.github.io/AAFitnessCoaching/?v=18 . Un onglet resté ouvert sur une ancienne version doit être actualisé pour charger les nouveaux écrans.

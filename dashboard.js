@@ -13,11 +13,11 @@ import {
   submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=17";
-import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=17";
+} from "./data.js?v=18";
+import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=18";
 
-import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=17";
-import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=17";
+import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=18";
+import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=18";
 let weeklyCheckin = null;
 let trainingBuilder = null;
 let detailRevision = 0;
