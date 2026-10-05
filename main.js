@@ -1,4 +1,4 @@
-import { captureInstallPrompt, getInstallState, requestInstall } from "./install.js?v=13";
+import { captureInstallPrompt, getInstallState, requestInstall } from "./install.js?v=14";
 
 const installButton = document.querySelector("#install-button");
 const installLabel = document.querySelector("#install-label");
@@ -10,7 +10,7 @@ const statusCopy = document.querySelector("#status-copy");
 
 function setInstallView() {
   const state = getInstallState();
-  installLabel.textContent = state === "installed" ? "AA Fitness Coaching est installé" : "Installer AA Fitness Coaching";
+  installLabel.textContent = state === "installed" ? "AAFitnessCoaching est installé" : "Installer l’app AAFitnessCoaching";
   installButton.disabled = state === "installed";
   browserNote.hidden = !["unavailable", "dismissed"].includes(state);
   statusCopy.textContent = state === "installed"

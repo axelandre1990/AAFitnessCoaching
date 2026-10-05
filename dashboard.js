@@ -5,7 +5,7 @@ import {
   submitCheckIn,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=13";
+} from "./data.js?v=14";
 
 const shell = document.querySelector("#signed-in-panel");
 const clientView = document.querySelector("#client-dashboard");
