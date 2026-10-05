@@ -1,12 +1,17 @@
-import { parseTrainingPlan } from "./coaching-model.js?v=22";
-import { mountTracking } from "./tracking.js?v=22";
-import { mountPhotos } from "./progress-photos.js?v=22";
+import { parseTrainingPlan } from "./coaching-model.js?v=23";
+import { mountTracking } from "./tracking.js?v=23";
+import { mountPhotos } from "./progress-photos.js?v=23";
+import { mountAnalysis } from "./analysis.js?v=23";
 let trackingModules = [];
 async function loadTracking(target, photosTarget, clientId, coach, valid) {
  const content=document.createElement('div'),photoContent=document.createElement('div');
  const tracking = await mountTracking(content,clientId,{coach});
  if (!valid()) { tracking.destroy(); return; }
  target.replaceChildren(content); trackingModules.push(tracking);
+ const analysisTarget = document.querySelector(coach ? "#coach-analysis" : "#client-analysis");
+ const analysisContent = document.createElement("div");
+ const analysis = await mountAnalysis(analysisContent,clientId,{coach,applyTargets:(values,read=false)=>{if(!nutritionBuilder)throw Error("Le constructeur alimentaire est en cours de chargement. Réessaie dans un instant.");if(read)return nutritionBuilder.serialize();nutritionBuilder.setTargets(values);}});
+ if(!valid()){analysis.destroy();return;} analysisTarget.replaceChildren(analysisContent); trackingModules.push(analysis);
  const photos = await mountPhotos(photoContent,clientId,{coach,enabled:tracking.settings?.photos_enabled ?? true});
  if (!valid()) { photos.destroy(); return; }
  photosTarget.replaceChildren(photoContent); trackingModules.push(photos);
@@ -28,11 +33,11 @@ import {
   submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=22";
-import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=22";
+} from "./data.js?v=23";
+import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=23";
 
-import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=22";
-import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=22";
+import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=23";
+import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=23";
 let weeklyCheckin = null;
 let trainingBuilder = null;
 let detailRevision = 0;
@@ -243,7 +248,7 @@ async function showClientHistory(clientId, clientName, checkinDay = null) {
 
 export function unmountDashboard() {
  for (const module of trackingModules) module.destroy(); trackingModules=[];
- for (const id of ["client-daily-tracking","client-progress-photos","coach-daily-tracking","coach-progress-photos"]) document.getElementById(id).replaceChildren();
+ for (const id of ["client-daily-tracking","client-progress-photos","coach-daily-tracking","coach-progress-photos","coach-analysis","client-analysis"]) document.getElementById(id).replaceChildren();
   ++detailRevision;
   weeklyCheckin = null; trainingBuilder = null;
   activeRole = null;

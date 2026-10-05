@@ -101,3 +101,17 @@ Le sélecteur « Base alimentaire pour la recherche » permet de chercher dans M
 Pendant la saisie des performances, chaque exercice affiche un aperçu de son image/animation (aperçu Google Drive pour les liens Drive, image directe si disponible) et les liens vers son média et sa vidéo. La disponibilité des médias dépend du partage des fichiers d’origine. Les charges et répétitions de chaque série de la dernière séance du même programme sont affichées séparément des nouveaux champs de saisie. La dernière séance de chaque jour du plan est récupérée même lorsqu’elle sort de l’historique récent de vingt séances. La note de séance facultative est multiligne, sauvegardée et lisible par le coach. Après sauvegarde, « Commencer une nouvelle séance » ouvre un formulaire vide avec les nouveaux résultats précédents.
 
 Le suivi journalier affiche sous sa note de contexte les exemples fournis par le coach : menstruations, insomnie, maladies, craquages, cheat meal, entraînements réalisés, baisse de performances et stress. Le suivi des notes doit être activé dans les options du client (activé par défaut). Aucune nouvelle migration.
+
+## V23 — Analyse du coaching sans macro timing
+
+- Calculateur coach par client : Mifflin / Katch (masse grasse requise), moyenne, unités kg/cm ou lb/pouces, activité, ajustement, pourcentages, fibres. Application explicite au brouillon du plan.
+- Variantes alimentaires standard, entraînement, repos, haut, bas; copie et objectifs indépendants. Enregistrement via le bouton du programme.
+- Roadmap datée dès un lundi : phase, stratégie, macros entraînement/repos, sommeil/pas, cardio, dépenses, événements et notes. Une prescription demeure active jusqu’à la suivante.
+- Synthèses hebdomadaires avec nombre de jours renseignés, écarts et variations du poids; graphiques journaliers/hebdomadaires de toutes les mesures numériques, glycémie convertie explicitement en mg/dL, performances par exercice (charge, reps, volume).
+- Neuf sites de mensuration stables configurables par le coach, saisie client datée, écarts et graphiques. Les sites désactivés restent dans l’historique.
+- Timeline photo privée et comparaison face/profil/dos entre deux séries; URL signée 10 minutes, actualisation disponible.
+- Historique des versions des programmes dès la migration (avec référence au programme existant).
+- Import coach CSV journalier / questionnaire, choix de ligne des titres et colonnes, aperçu complet, confirmation du client; dates déjà présentes conservées. Deux dernières années, 730 lignes maximum, validations serveur, aucune importation automatique des fichiers privés.
+- L’option macro timing n’est pas incluse.
+
+Les moyennes ignorent les valeurs manquantes et conservent les zéros. Les objectifs de macros moyens nécessitent les types de jours encodés; la complétude figure séparément. Les données des relevés quotidiens constituent la source des analyses.

@@ -1,5 +1,5 @@
-import {supabase} from './supabase.js?v=22';
-import {METRICS,DEFAULT_SETTINGS,todayBrussels,consumedCalories,validateMetrics} from './tracking-model.js?v=22';
+import {supabase} from './supabase.js?v=23';
+import {METRICS,DEFAULT_SETTINGS,todayBrussels,consumedCalories,validateMetrics} from './tracking-model.js?v=23';
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
 const single=data=>Array.isArray(data)?data[0]:data;
 async function query(q){const {data,error}=await q;if(error)throw Error(error.message);return data;}

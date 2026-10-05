@@ -163,7 +163,7 @@ function createDefaultMeals(existing = []) {
   });
 }
 
-export async function mountNutritionBuilder(container, savedValue = "") {
+async function mountNutritionCore(container, savedValue = "") {
   container.replaceChildren(node("p", "empty-state", "Chargement du catalogue alimentaire…"));
   const parsed = parsePlan(savedValue);
   const saved = parsed.structured || {};
@@ -400,6 +400,7 @@ export async function mountNutritionBuilder(container, savedValue = "") {
   };
 
   return {
+    setTargets(values) { for(const key of ["protein_g","carbs_g","fat_g","fiber_g"]){state.targets[key]=values[key]??null;targets.querySelector(`[name="${key}"]`).value=state.targets[key]??"";}macrosChanged=true;refreshDaily();},
     serialize() {
       for (const [key, value] of Object.entries(state.targets)) {
         if (hasValue(value) && (!Number.isFinite(Number(value)) || Number(value) < 0)) throw new Error(`Vérifie l’objectif ${targetFields.find(field => field[1] === key)?.[0] || key} : indique un nombre positif ou zéro.`);
@@ -420,7 +421,7 @@ export async function mountNutritionBuilder(container, savedValue = "") {
   };
 }
 
-export function renderClientNutrition(target, savedValue) {
+function renderNutritionCore(target, savedValue) {
   const parsed = parsePlan(savedValue);
   target.replaceChildren();
   if (!parsed.structured) {
@@ -461,4 +462,20 @@ export function renderClientNutrition(target, savedValue) {
   if (hasItems) target.append(meals);
   else if (!plan.notes && !targetList.length) target.append(node("p", "", "Le plan alimentaire est prêt à être complété par le coach."));
   target.append(sourceNote("nutrition-source-note nutrition-source-note--client"));
+}
+
+export async function mountNutritionBuilder(container,savedValue="") {
+ const parsed=parsePlan(savedValue),base=parsed.structured;const variants=structuredClone(base?.variants||{});let current=base?.activeVariant||'standard';
+ if(!variants[current])variants[current]=base?{...base,variants:undefined,activeVariant:undefined}:null;
+ const names={standard:'Plan standard',training:'Jour entraînement',rest:'Jour repos',high:'Jour haut',low:'Jour bas'};
+ const controls=node('div','nutrition-variants'),label=node('label','auth-field','Version du plan alimentaire'),choice=document.createElement('select');choice.setAttribute('aria-label','Version du plan alimentaire');for(const[k,l]of Object.entries(names))choice.append(new Option(l,k));choice.value=current;label.append(choice);controls.append(label);
+ controls.append(node('p','card-copy','Chaque version conserve ses repas et ses objectifs. Les versions renseignées sont accessibles au client après Enregistrer le programme.'));
+ const content=node('div');container.replaceChildren(controls,content);let core=await mountNutritionCore(content,variants[current]?JSON.stringify(variants[current]):savedValue);if(!core)return null;
+ choice.onchange=async()=>{const next=choice.value;try{variants[current]=JSON.parse(core.serialize());choice.disabled=true;current=next;core=await mountNutritionCore(content,variants[current]?JSON.stringify(variants[current]):'');}catch(e){choice.value=current;controls.append(node('p','inline-message',e.message));}finally{choice.disabled=false;}};
+ const copy=node('button','auth-secondary','Dupliquer cette version vers un autre type de jour');copy.type='button';const destination=document.createElement('select');destination.setAttribute('aria-label','Destination de la copie');for(const[k,l]of Object.entries(names))destination.append(new Option(l,k));destination.value='training';copy.onclick=async()=>{if(destination.value===current)return;variants[current]=JSON.parse(core.serialize());variants[destination.value]=structuredClone(variants[current]);choice.value=destination.value;await choice.onchange();};controls.append(destination,copy);
+ return {setTargets(values){if(choice.disabled||!core)throw Error('Attends le chargement de la version.');core.setTargets(values);},serialize(){if(choice.disabled||!core)throw Error('Attends le chargement de la version.');variants[current]=JSON.parse(core.serialize());return JSON.stringify({...variants[current],variants,activeVariant:current});}};
+}
+export function renderClientNutrition(target,savedValue){
+ const plan=parsePlan(savedValue).structured;if(!plan?.variants){renderNutritionCore(target,savedValue);return;}
+ const label=node('label','auth-field','Type de plan alimentaire'),choice=document.createElement('select');const names={standard:'Plan standard',training:'Jour entraînement',rest:'Jour repos',high:'Jour haut',low:'Jour bas'};for(const key of Object.keys(plan.variants))choice.append(new Option(names[key]||key,key));choice.value=plan.activeVariant||'standard';label.append(choice);const content=node('div');target.replaceChildren(label,content);choice.onchange=()=>renderNutritionCore(content,JSON.stringify(plan.variants[choice.value]));choice.onchange();
 }

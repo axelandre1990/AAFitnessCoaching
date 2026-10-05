@@ -1,4 +1,4 @@
-const CACHE_NAME = "aa-fitness-coaching-shell-v22";
+const CACHE_NAME = "aa-fitness-coaching-shell-v23";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -12,6 +12,11 @@ const APP_SHELL = [
   "./data.js",
   "./dashboard.js",
   "./nutrition-builder.js",
+  "./history-import.js",
+  "./analysis-ui.js",
+  "./analysis-data.js",
+  "./analysis-model.js",
+  "./analysis.js",
   "./progress-photos.js",
   "./tracking.js",
   "./tracking-model.js",

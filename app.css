@@ -436,3 +436,32 @@ h1 span { color: #a1aaa7; }
 @media(max-width:520px){.photo-grid{grid-template-columns:1fr}.photo-grid img{height:320px}}
 
 .exercise-preview{display:block;width:min(100%,320px);height:210px;border:1px solid var(--color-border);border-radius:12px;object-fit:contain;background:#111414;margin:12px 0}.set-previous{grid-column:1/-1;color:var(--color-accent);font-size:.85rem;margin:0 0 8px}.tracking-note-help{grid-column:1/-1;}
+/* Coach calculations and recorded client analyses */
+.analysis-panel {grid-column:1/-1;min-width:0;margin-block:24px;}
+.analysis-section {border:1px solid rgba(128,217,207,.2);border-radius:16px;margin:16px 0;background:rgba(128,217,207,.025);}
+.analysis-section>summary {padding:18px;font-weight:650;cursor:pointer;color:var(--color-accent,#80D9CF);}
+.analysis-content {padding:0 18px 20px;min-width:0;}
+.analysis-content>details {padding:14px 0;border-bottom:1px solid #ffffff1a;}
+.analysis-fields {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0;}
+.analysis-fields .auth-field {min-width:0;}
+.analysis-site {display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:center;margin:12px 0;}
+.analysis-site input[type=checkbox] {margin-left:12px;accent-color:#80D9CF;}
+.analysis-table {max-width:100%;overflow-x:auto;margin:16px 0;}
+.analysis-table table {border-collapse:collapse;min-width:100%;font-size:.85rem;}
+.analysis-table caption {text-align:left;color:#80D9CF;padding:10px 0;font-weight:600;}
+.analysis-table th,.analysis-table td {padding:10px;text-align:left;border-bottom:1px solid #ffffff24;white-space:nowrap;}
+.analysis-charts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+.analysis-chart {margin:0;padding:14px;border:1px solid #ffffff24;border-radius:12px;min-width:0;}
+.analysis-chart figcaption {font-weight:650;margin-bottom:12px;}
+.analysis-chart svg {width:100%;height:auto;}
+.analysis-chart svg text {fill:#b7c3c1;font-size:13px;}
+.analysis-content pre {white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75rem;max-height:400px;overflow:auto;}
+.analysis-macro-block {border:1px solid #ffffff24;border-radius:12px;padding:14px;}
+.analysis-content button {margin:8px 6px 8px 0;}
+.photo-comparison {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0;}
+.photo-comparison figure {margin:0;min-width:0;}
+.photo-comparison img {width:100%;height:320px;object-fit:contain;background:#ffffff08;border-radius:12px;}
+.photo-comparison figcaption {font-size:.85rem;margin-bottom:10px;}
+.nutrition-variants {padding:16px 0;border-bottom:1px solid #ffffff24;margin-bottom:20px;}
+.nutrition-variants>select {max-width:100%;margin:8px 0;}
+@media(max-width:640px){.analysis-fields,.analysis-charts{grid-template-columns:1fr;}.analysis-content{padding:0 12px 16px;}.analysis-site{grid-template-columns:1fr;gap:4px;}.photo-comparison{gap:8px;}.photo-comparison img{height:220px;}}

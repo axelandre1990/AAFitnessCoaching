@@ -116,6 +116,7 @@
               <p class="programme-updated" id="client-plan-updated"></p>
             </section>
             <div class="dashboard-grid dashboard-grid--client progress-grid">
+              <section class="dashboard-card analysis-panel" id="client-analysis"></section>
               <section class="dashboard-card" id="client-daily-tracking"></section>
               <section class="dashboard-card" id="client-progress-photos"></section>
               <section class="dashboard-card" aria-labelledby="progress-history-title">
@@ -164,10 +165,11 @@
                 </form>
               </section>
               <div class="timeline" id="coach-history"></div>
+              <section class="dashboard-card analysis-panel" id="coach-analysis"></section>
               <div class="dashboard-grid dashboard-grid--coach coach-client-tools">
                 <section class="dashboard-card" aria-labelledby="coach-plan-title">
                   <div class="card-heading"><div><p class="card-kicker">PROGRAMME CLIENT</p><h3 id="coach-plan-title">Nutrition et entraînement</h3></div></div>
-                  <nav class="exercise-actions" aria-label="Plans du client"><a class="text-action" href="#nutrition-builder">Plan alimentaire</a><a class="text-action" href="#training-builder">Plan d’entraînement</a><a class="text-action" href="#coach-daily-tracking">Options de suivi</a><a class="text-action" href="#coach-progress-photos">Photos</a></nav>
+                  <nav class="exercise-actions" aria-label="Plans du client"><a class="text-action" href="#nutrition-builder">Plan alimentaire</a><a class="text-action" href="#training-builder">Plan d’entraînement</a><a class="text-action" href="#coach-analysis">Calculateur et analyses</a><a class="text-action" href="#coach-daily-tracking">Options de suivi</a><a class="text-action" href="#coach-progress-photos">Photos</a></nav>
                   <form id="coach-plan-form">
                   <div class="nutrition-builder" id="nutrition-builder" aria-live="polite">
                     <p class="empty-state">Chargement du constructeur nutrition…</p>
@@ -212,7 +214,7 @@
       </form>
     </dialog>
 
-    <script type="module" src="./main.js?v=22"></script>
-    <script type="module" src="./auth.js?v=22"></script>
+    <script type="module" src="./main.js?v=23"></script>
+    <script type="module" src="./auth.js?v=23"></script>
   </body>
 </html>
