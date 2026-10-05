@@ -1,5 +1,5 @@
-import {supabase} from './supabase.js?v=20';
-import {todayBrussels} from './tracking-model.js?v=20';
+import {supabase} from './supabase.js?v=21';
+import {todayBrussels} from './tracking-model.js?v=21';
 const bucket='aa-progress-photos';const poses=[['front','Face'],['side','Profil'],['back','Dos']];
 const n=(tag,text,cls)=>{const x=document.createElement(tag);if(text)x.textContent=text;if(cls)x.className=cls;return x;};
 async function result(p){const {data,error}=await p;if(error)throw Error(error.message);return data;}

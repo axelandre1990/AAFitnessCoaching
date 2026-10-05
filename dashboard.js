@@ -1,5 +1,5 @@
-import { mountTracking } from "./tracking.js?v=20";
-import { mountPhotos } from "./progress-photos.js?v=20";
+import { mountTracking } from "./tracking.js?v=21";
+import { mountPhotos } from "./progress-photos.js?v=21";
 let trackingModules = [];
 async function loadTracking(target, photosTarget, clientId, coach, valid) {
  const content=document.createElement('div'),photoContent=document.createElement('div');
@@ -26,11 +26,11 @@ import {
   submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=20";
-import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=20";
+} from "./data.js?v=21";
+import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=21";
 
-import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=20";
-import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=20";
+import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=21";
+import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=21";
 let weeklyCheckin = null;
 let trainingBuilder = null;
 let detailRevision = 0;

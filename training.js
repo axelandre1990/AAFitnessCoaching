@@ -1,4 +1,4 @@
-import { parseTrainingPlan, validateTrainingPlan, validateWorkout } from './coaching-model.js?v=20';
+import { parseTrainingPlan, validateTrainingPlan, validateWorkout } from './coaching-model.js?v=21';
 const node=(tag,cls='',text='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
 const uid=()=>crypto.randomUUID();
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
