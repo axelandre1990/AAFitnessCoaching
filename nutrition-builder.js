@@ -180,6 +180,22 @@ export async function mountNutritionBuilder(container, savedValue = "") {
     return null;
   }
 
+  const sourceNames = { AA_CUSTOM: "Ma base personnelle AA", CIQUAL_2025: "Ciqual 2025", USDA_SR_LEGACY_2018: "USDA — SR Legacy", USDA_FNDDS_2021_2023: "USDA — FNDDS", USDA_FOUNDATION_2026: "USDA — Foundation" };
+  const sourceLabel = node("label", "auth-field nutrition-source-filter", "Base alimentaire pour la recherche");
+  const sourceFilter = document.createElement("select");
+  const sourceOptions = [["all", "Toutes les bases"], ["AA_CUSTOM", sourceNames.AA_CUSTOM], ["CIQUAL_2025", sourceNames.CIQUAL_2025], ["usda", "Toutes les bases USDA"], ...Object.entries(sourceNames).filter(([key]) => key.startsWith("USDA_"))];
+  for (const [value, label] of sourceOptions) {
+    const option = node("option", label); option.value = value; sourceFilter.append(option);
+  }
+  try { const remembered = localStorage.getItem("aa-food-source-filter"); if (sourceOptions.some(([key]) => key === remembered)) sourceFilter.value = remembered; } catch { /* Preferences are optional. */ }
+  sourceLabel.append(sourceFilter);
+  const sourceHint = node("p", "card-copy", "Ce choix s’applique à la recherche dans tous les repas.");
+  const searches = [];
+  sourceFilter.addEventListener("change", () => {
+    try { localStorage.setItem("aa-food-source-filter", sourceFilter.value); } catch { /* Preferences are optional. */ }
+    for (const search of searches) search();
+  });
+
   const targetsHeading = node("p", "card-kicker", "OBJECTIFS THÉORIQUES JOURNALIERS");
   const targets = node("div", "nutrition-targets");
   let macrosChanged = false;
@@ -322,11 +338,14 @@ export async function mountNutritionBuilder(container, savedValue = "") {
     renderedMeals.push(section);
 
     let searchTimer;
-    searchInput.addEventListener("input", () => {
+    const updateSearch = () => {
+      resultBox.replaceChildren();
+      section._selectedFood = null;
+      selected.textContent = "Aucun aliment sélectionné";
       window.clearTimeout(searchTimer);
       searchTimer = window.setTimeout(() => {
         resultBox.replaceChildren();
-        for (const food of searchFoods(foods, searchInput.value)) {
+        for (const food of searchFoods(foods.filter(food => sourceFilter.value === "all" || (sourceFilter.value === "usda" ? food.source.startsWith("USDA_") : food.source === sourceFilter.value)), searchInput.value)) {
           const result = node("button", "nutrition-search__result");
           result.type = "button";
           result.dataset.foodId = food.id;
@@ -337,7 +356,9 @@ export async function mountNutritionBuilder(container, savedValue = "") {
         }
         if (searchInput.value.trim() && !resultBox.childElementCount) resultBox.append(node("p", "empty-state", "Aucun aliment trouvé."));
       }, 120);
-    });
+    };
+    searchInput.addEventListener("input", updateSearch);
+    searches.push(updateSearch);
     section._selectedFood = null;
     section._selected = selected;
     section._grams = gramsInput;
@@ -345,7 +366,7 @@ export async function mountNutritionBuilder(container, savedValue = "") {
   }
 
   refreshDaily();
-  container.replaceChildren(targetsHeading, targets, formulaNote, comparison, sourceNote("nutrition-source-note"), notesLabel, node("p", "card-kicker nutrition-meals__title", "COMPOSITION DES REPAS"), mealsWrap);
+  container.replaceChildren(targetsHeading, targets, formulaNote, comparison, sourceNote("nutrition-source-note"), notesLabel, node("p", "card-kicker nutrition-meals__title", "COMPOSITION DES REPAS"), sourceLabel, sourceHint, mealsWrap);
   container.onclick = (event) => {
     const section = event.target.closest(".nutrition-meal");
     if (!section) return;

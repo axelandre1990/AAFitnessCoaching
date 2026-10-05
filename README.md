@@ -1,4 +1,4 @@
-# AAFitnessCoaching V5.1
+# AAFitnessCoaching V6
 
 Application web progressive, en français et conçue d’abord pour mobile. Les V2 et V3 fournissent une authentification e-mail, les espaces client et coach, les invitations, les check-ins et retours, les programmes par client et le suivi de mesures. V4 ajoute au coach un constructeur de plans alimentaires structurés, une recherche alimentaire et des totaux calculés par repas. V5 ajoute le constructeur d’entraînement, les séries réalisées et le questionnaire hebdomadaire avec un jour choisi par le coach. L’application utilise Supabase Auth et Postgres avec Row Level Security ; l’interface ne remplace jamais les contrôles d’accès de la base.
 
@@ -58,7 +58,7 @@ Le constructeur nutrition permet de composer des plans alimentaires. V5 ajoute l
 
 ## À prévoir ensuite
 
-Photos, graphiques de progression, messagerie temps réel, notifications push et fournisseurs sociaux restent à ajouter.
+Graphiques de progression, messagerie temps réel, notifications push et fournisseurs sociaux restent à ajouter.
 
 
 ## V5 — entraînement et check-in hebdomadaire
@@ -91,3 +91,7 @@ Sur une fiche client, le coach choisit chaque métrique, le suivi manuel des mac
 Trois poses obligatoires face/profil/dos, jusqu’à trois photos supplémentaires. Images décodées puis réencodées JPEG sans métadonnées EXIF, réduites à 2048 pixels et 3 Mo maximum. Seules les séries complètes deviennent consultables. Bucket privé aa-progress-photos, accès client propriétaire/coach affecté, liens temporaires de dix minutes ; bouton d’actualisation de galerie. L’envoi interrompu nettoie les fichiers incomplets, les fichiers déjà validés ne sont pas supprimables par cette opération. Pas de photos ni de données réelles importées du workbook.
 
 Migration 20261005162045_daily_tracking_photos.sql appliquée. Les tests SQL V6 utilisent uniquement des comptes et métadonnées fictifs et annulent leur transaction. Les tests navigateur simulent l’API Supabase et les erreurs d’envoi ; aucun essai de photo réelle n’est effectué. Aucun transfert automatique ou accès API Cronometer.
+
+## v20 — filtre de base alimentaire
+
+Le sélecteur « Base alimentaire pour la recherche » permet de chercher dans Ma base personnelle AA (181 aliments), Ciqual 2025, toutes les bases USDA, chaque jeu USDA individuellement, ou toutes les bases. Le choix s’applique aux six repas et est mémorisé localement sur le navigateur. Il ne modifie pas les aliments déjà ajoutés au plan.

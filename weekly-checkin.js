@@ -1,4 +1,4 @@
-import { QUESTIONS, WEEKDAYS, CHECKIN_NOTE, validateAnswers, weeklyWindow } from './coaching-model.js?v=19';
+import { QUESTIONS, WEEKDAYS, CHECKIN_NOTE, validateAnswers, weeklyWindow } from './coaching-model.js?v=20';
 const node=(tag,cls='',text='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
 export function mountWeeklyCheckIn(form, {email,fullName,checkinDay,checkIns=[]}) {
   const window=weeklyWindow(checkinDay);
