@@ -183,9 +183,10 @@ export async function mountNutritionBuilder(container, savedValue = "") {
   const sourceNames = { AA_CUSTOM: "Ma base personnelle AA", CIQUAL_2025: "Ciqual 2025", USDA_SR_LEGACY_2018: "USDA — SR Legacy", USDA_FNDDS_2021_2023: "USDA — FNDDS", USDA_FOUNDATION_2026: "USDA — Foundation" };
   const sourceLabel = node("label", "auth-field nutrition-source-filter", "Base alimentaire pour la recherche");
   const sourceFilter = document.createElement("select");
+  sourceFilter.setAttribute("aria-label", "Base alimentaire pour la recherche");
   const sourceOptions = [["all", "Toutes les bases"], ["AA_CUSTOM", sourceNames.AA_CUSTOM], ["CIQUAL_2025", sourceNames.CIQUAL_2025], ["usda", "Toutes les bases USDA"], ...Object.entries(sourceNames).filter(([key]) => key.startsWith("USDA_"))];
   for (const [value, label] of sourceOptions) {
-    const option = node("option", label); option.value = value; sourceFilter.append(option);
+    const option = node("option", "", label); option.value = value; sourceFilter.append(option);
   }
   try { const remembered = localStorage.getItem("aa-food-source-filter"); if (sourceOptions.some(([key]) => key === remembered)) sourceFilter.value = remembered; } catch { /* Preferences are optional. */ }
   sourceLabel.append(sourceFilter);
