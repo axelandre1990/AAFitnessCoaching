@@ -1,4 +1,4 @@
-const CACHE_NAME = "aa-fitness-coaching-shell-v4";
+const CACHE_NAME = "aa-fitness-coaching-shell-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -12,6 +12,10 @@ const APP_SHELL = [
   "./data.js",
   "./dashboard.js",
   "./nutrition-builder.js",
+  "./data/exercise-catalog.json",
+  "./training.js",
+  "./weekly-checkin.js",
+  "./coaching-model.js",
   "./aa-logo.png",
   "./icon-192.png",
   "./icon-512.png"
@@ -40,6 +44,6 @@ self.addEventListener("fetch", (event) => {
     return response;
   }).catch(async () => {
     if (request.mode === "navigate") return (await caches.match("./index.html")) || caches.match("./");
-    return caches.match(request);
+    return caches.match(request, { ignoreSearch: true });
   }));
 });

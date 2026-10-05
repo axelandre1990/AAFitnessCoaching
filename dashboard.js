@@ -5,13 +5,22 @@ import {
   getClientPlan,
   getProgressEntries,
   saveClientPlan,
-  submitCheckIn,
+  getCurrentProfile,
+  submitWeeklyCheckIn,
+  setCheckinDay,
+  getTrainingHistory,
+  submitTrainingSession,
   submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=16";
-import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=16";
+} from "./data.js?v=17";
+import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=17";
 
+import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=17";
+import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=17";
+let weeklyCheckin = null;
+let trainingBuilder = null;
+let detailRevision = 0;
 const shell = document.querySelector("#signed-in-panel");
 const clientView = document.querySelector("#client-dashboard");
 const coachView = document.querySelector("#coach-dashboard");
@@ -59,7 +68,8 @@ function renderCheckIn(checkIn, { coachMode = false } = {}) {
   header.append(element("time", "checkin-entry__date", dateLabel(checkIn.created_at)));
   header.append(element("span", `status-pill${checkIn.status === "reviewed" ? " status-pill--done" : ""}`, checkIn.status === "reviewed" ? "Répondu" : "À traiter"));
   card.append(header);
-  card.append(element("p", "checkin-entry__body", checkIn.body));
+  if (checkIn.kind === "weekly" && checkIn.answers) renderWeeklyAnswers(card, checkIn);
+  else card.append(element("p", "checkin-entry__body", checkIn.body));
   for (const reply of checkIn.feedback || []) card.append(renderFeedback(reply));
 
   if (coachMode && checkIn.status !== "reviewed") {
@@ -120,7 +130,9 @@ async function loadProgressHistory(target, clientId, emptyCopy) {
 async function loadClient(clientId) {
   clientHistory.replaceChildren(element("p", "empty-state", "Chargement de ton suivi…"));
   try {
-    const [checkIns, plan] = await Promise.all([getClientHome(), getClientPlan(clientId)]);
+    const [checkIns, plan, identity, history] = await Promise.all([getClientHome(), getClientPlan(clientId), getCurrentProfile(), getTrainingHistory(clientId)]);
+    if (activeRole !== "client" || activeClientId !== clientId) return;
+    weeklyCheckin = mountWeeklyCheckIn(document.querySelector("#checkin-form"), {email: identity.user.email, fullName: identity.profile.full_name, checkinDay: identity.profile.checkin_day, checkIns});
     clientHistory.replaceChildren();
     if (!checkIns.length) {
       clientHistory.append(element("p", "empty-state", "Ton premier check-in apparaîtra ici après son envoi."));
@@ -128,7 +140,12 @@ async function loadClient(clientId) {
       for (const checkIn of checkIns) clientHistory.append(renderCheckIn(checkIn));
     }
     renderClientNutrition(document.querySelector("#client-nutrition-plan"), plan?.nutrition_plan || "");
-    document.querySelector("#client-training-plan").textContent = plan?.training_plan || "Ton coach n’a pas encore ajouté de programme d’entraînement.";
+    renderClientTraining(document.querySelector("#client-training-plan"), plan?.training_plan || "", {history, onSubmit: async (dayId, logs, notes, requestId) => {
+      await submitTrainingSession(dayId, logs, notes, requestId);
+      const updated = await getTrainingHistory(clientId);
+      if (activeClientId === clientId) renderTrainingHistory(document.querySelector("#client-training-history"), updated);
+    }});
+    renderTrainingHistory(document.querySelector("#client-training-history"), history);
     document.querySelector("#client-plan-updated").textContent = plan?.updated_at ? `Mis à jour le ${dateLabel(plan.updated_at)}` : "Ton programme apparaîtra ici dès que ton coach l’aura préparé.";
     await loadProgressHistory(clientProgress, clientId, "Aucune mesure enregistrée pour le moment.");
   } catch (error) {
@@ -152,6 +169,7 @@ async function loadCoach() {
       button.type = "button";
       button.dataset.clientId = client.id;
       button.dataset.clientName = client.full_name || "Client AA";
+      button.dataset.checkinDay = client.checkin_day || "";
       const main = element("span", "client-row__main");
       main.append(element("strong", "client-row__name", client.full_name || "Client AA"));
       main.append(element("span", "client-row__meta", client.latest_check_in ? `Dernier check-in · ${dateLabel(client.latest_check_in.created_at)}` : "En attente du premier check-in"));
@@ -165,14 +183,19 @@ async function loadCoach() {
   }
 }
 
-async function showClientHistory(clientId, clientName) {
-  selectedClient = { id: clientId, name: clientName };
+async function showClientHistory(clientId, clientName, checkinDay = null) {
+  const revision = ++detailRevision;
+  selectedClient = { id: clientId, name: clientName, checkinDay };
+  document.querySelector("#checkin-schedule-form").elements.weekday.value = checkinDay || "";
+  announce(document.querySelector("#checkin-schedule-message"), "");
+  nutritionBuilder = null; trainingBuilder = null;
   document.querySelector("#coach-detail-title").textContent = clientName;
   coachGrid.hidden = true;
   document.querySelector("#coach-client-detail").hidden = false;
   coachHistory.replaceChildren(element("p", "empty-state", "Chargement des check-ins…"));
   try {
-    const [checkIns, plan] = await Promise.all([getClientCheckIns(clientId), getClientPlan(clientId)]);
+    const [checkIns, plan, history] = await Promise.all([getClientCheckIns(clientId), getClientPlan(clientId), getTrainingHistory(clientId)]);
+    if (revision !== detailRevision || activeRole !== "coach") return;
     coachHistory.replaceChildren();
     if (!checkIns.length) {
       coachHistory.append(element("p", "empty-state", "Ce client n’a pas encore envoyé de check-in."));
@@ -180,8 +203,14 @@ async function showClientHistory(clientId, clientName) {
       for (const checkIn of checkIns) coachHistory.append(renderCheckIn(checkIn, { coachMode: true }));
     }
     const planForm = document.querySelector("#coach-plan-form");
-    nutritionBuilder = await mountNutritionBuilder(document.querySelector("#nutrition-builder"), plan?.nutrition_plan || "");
-    planForm.elements.training_plan.value = plan?.training_plan || "";
+    const nutritionContainer = element("div", "nutrition-editor");
+    const trainingContainer = element("div", "training-editor");
+    const [nutrition, training] = await Promise.all([mountNutritionBuilder(nutritionContainer, plan?.nutrition_plan || ""), mountTrainingBuilder(trainingContainer, plan?.training_plan || "")]);
+    if (revision !== detailRevision || activeRole !== "coach") return;
+    nutritionBuilder = nutrition; trainingBuilder = training;
+    document.querySelector("#nutrition-builder").replaceChildren(nutritionContainer);
+    document.querySelector("#training-builder").replaceChildren(trainingContainer);
+    renderTrainingHistory(document.querySelector("#coach-training-history"), history);
     announce(document.querySelector("#coach-plan-message"), plan?.updated_at ? `Dernière mise à jour · ${dateLabel(plan.updated_at)}` : "Aucun programme enregistré.");
     await loadProgressHistory(coachProgress, clientId, "Ce client n’a pas encore saisi de mesure.");
   } catch (error) {
@@ -190,6 +219,8 @@ async function showClientHistory(clientId, clientName) {
 }
 
 export function unmountDashboard() {
+  ++detailRevision;
+  weeklyCheckin = null; trainingBuilder = null;
   activeRole = null;
   selectedClient = null;
   shell.hidden = true;
@@ -200,6 +231,9 @@ export function unmountDashboard() {
   document.querySelector("#coach-client-detail").hidden = true;
   nutritionBuilder = null;
   document.querySelector("#nutrition-builder").replaceChildren();
+  document.querySelector("#training-builder").replaceChildren();
+  document.querySelector("#client-training-history").replaceChildren();
+  document.querySelector("#coach-training-history").replaceChildren();
   clientHistory.replaceChildren();
   coachHistory.replaceChildren();
   clientList.replaceChildren();
@@ -234,27 +268,31 @@ export async function mountDashboard({ role, profile, onSignOut }) {
   document.querySelector("#blocked-sign-out").onclick = onSignOut;
 }
 
-document.querySelector("#checkin-form").addEventListener("submit", async (event) => {
+document.querySelector("#checkin-form").addEventListener("submit", async event => {
   event.preventDefault();
-  if (activeRole !== "client") return;
-  const form = event.currentTarget;
-  const body = form.elements.body.value;
+  if (activeRole !== "client" || !weeklyCheckin) return;
   const button = document.querySelector("#checkin-submit");
   const message = document.querySelector("#checkin-message");
-  button.disabled = true;
-  button.textContent = "Envoi…";
-  announce(message, "Envoi de ton check-in…");
+  let answers;
+  try { answers = weeklyCheckin.serialize(); } catch (error) { announce(message,error.message,"error");return; }
+  button.disabled = true; button.textContent = "Envoi…";
   try {
-    await submitCheckIn(body);
-    form.reset();
-    announce(message, "Ton check-in a été envoyé à ton coach.", "success");
+    await submitWeeklyCheckIn(answers);
+    weeklyCheckin = null;
+    announce(message,"Ton check-in hebdomadaire a été envoyé au coach.","success");
     await loadClient(activeClientId);
-  } catch (error) {
-    announce(message, error.message, "error");
-  } finally {
-    button.disabled = false;
-    button.textContent = "Envoyer mon check-in";
+  } catch(error) {
+    announce(message,error.message,"error");button.disabled=false;button.textContent="Envoyer mon check-in hebdomadaire";
   }
+});
+document.querySelector("#checkin-schedule-form").addEventListener("submit", async event => {
+  event.preventDefault(); if(activeRole!=="coach" || !selectedClient) return;
+  const clientId=selectedClient.id;
+  const button=event.currentTarget.querySelector('button');const weekday=event.currentTarget.elements.weekday.value;
+  const message=document.querySelector("#checkin-schedule-message");button.disabled=true;
+  try {await setCheckinDay(clientId,weekday);if(selectedClient?.id===clientId){selectedClient.checkinDay=Number(weekday);announce(message,"Jour de check-in enregistré.","success");}await loadCoach();}
+  catch(error){if(selectedClient?.id===clientId)announce(message,error.message,"error");}
+  finally{button.disabled=false;}
 });
 
 document.querySelector("#progress-form").addEventListener("submit", async (event) => {
@@ -289,8 +327,8 @@ document.querySelector("#coach-plan-form").addEventListener("submit", async (eve
   button.textContent = "Enregistrement…";
   announce(message, "Enregistrement du programme…");
   try {
-    if (!nutritionBuilder) throw new Error("Le constructeur nutrition n’est pas disponible. Recharge la page et réessaie.");
-    const plan = await saveClientPlan(selectedClient.id, { nutritionPlan: nutritionBuilder.serialize(), trainingPlan: form.elements.training_plan.value });
+    if (!nutritionBuilder || !trainingBuilder) throw new Error("Le constructeur nutrition n’est pas disponible. Recharge la page et réessaie.");
+    const plan = await saveClientPlan(selectedClient.id, { nutritionPlan: nutritionBuilder.serialize(), trainingPlan: trainingBuilder.serialize() });
     announce(message, `Programme enregistré · ${dateLabel(plan.updated_at)}`, "success");
   } catch (error) {
     announce(message, error.message, "error");
@@ -329,10 +367,11 @@ document.querySelector("#refresh-coach").addEventListener("click", () => {
 clientList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-client-id]");
   if (!button || activeRole !== "coach") return;
-  showClientHistory(button.dataset.clientId, button.dataset.clientName);
+  showClientHistory(button.dataset.clientId, button.dataset.clientName, button.dataset.checkinDay);
 });
 
 document.querySelector("#coach-back").addEventListener("click", () => {
+  ++detailRevision;
   selectedClient = null;
   document.querySelector("#coach-client-detail").hidden = true;
   coachGrid.hidden = false;
@@ -349,7 +388,11 @@ coachHistory.addEventListener("submit", async (event) => {
   announce(message, "Envoi de ton retour…");
   try {
     await replyToCheckIn(form.dataset.checkinId, form.elements.body.value);
-    if (selectedClient) await showClientHistory(selectedClient.id, selectedClient.name);
+    if (selectedClient) {
+      const clientId=selectedClient.id;
+      const checkIns=await getClientCheckIns(clientId);
+      if(selectedClient?.id===clientId){coachHistory.replaceChildren();for(const item of checkIns)coachHistory.append(renderCheckIn(item,{coachMode:true}));}
+    }
     await loadCoach();
   } catch (error) {
     announce(message, error.message, "error");

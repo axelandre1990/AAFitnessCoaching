@@ -97,15 +97,9 @@
             </div>
             <div class="dashboard-grid dashboard-grid--client">
               <section class="dashboard-card checkin-card" aria-labelledby="checkin-title">
-                <div class="card-heading"><div><p class="card-kicker">TON SUIVI</p><h3 id="checkin-title">Nouveau check-in</h3></div><span class="card-icon" aria-hidden="true">↗</span></div>
-                <p class="card-copy">Comment se passe ta semaine ? Écris ton retour pour ton coach.</p>
-                <form id="checkin-form">
-                  <label class="auth-field" for="checkin-body">Ton message
-                    <textarea id="checkin-body" name="body" maxlength="4000" rows="6" required placeholder="Écris ton check-in ici…"></textarea>
-                  </label>
-                  <p class="inline-message" id="checkin-message" role="status" aria-live="polite"></p>
-                  <button class="auth-primary dashboard-submit" id="checkin-submit" type="submit">Envoyer mon check-in</button>
-                </form>
+                <div class="card-heading"><div><p class="card-kicker">TON SUIVI</p><h3 id="checkin-title">Check-in hebdomadaire</h3></div><span class="card-icon" aria-hidden="true">↗</span></div>
+                <p class="card-copy">Réponds à ton questionnaire hebdomadaire pour permettre à ton coach de faire ton retour.</p>
+                <form id="checkin-form" novalidate><p class="empty-state">Chargement du questionnaire…</p></form>
               </section>
               <section class="dashboard-card history-card" aria-labelledby="history-title">
                 <div class="card-heading"><div><p class="card-kicker">TES ÉCHANGES</p><h3 id="history-title">Check-ins et retours</h3></div></div>
@@ -116,7 +110,7 @@
               <div class="card-heading"><div><p class="card-kicker">TES REPÈRES</p><h3 id="client-programme-title">Ton accompagnement</h3></div></div>
               <div class="programme-grid">
                 <article class="programme-section"><p class="card-kicker">NUTRITION</p><div class="programme-copy" id="client-nutrition-plan">Ton coach n’a pas encore ajouté de repères nutrition.</div></article>
-                <article class="programme-section"><p class="card-kicker">ENTRAÎNEMENT</p><div class="programme-copy" id="client-training-plan">Ton coach n’a pas encore ajouté de programme d’entraînement.</div></article>
+                <article class="programme-section"><p class="card-kicker">ENTRAÎNEMENT</p><div class="programme-copy" id="client-training-plan">Ton coach n’a pas encore ajouté de programme d’entraînement.</div><div id="client-training-history"></div></article>
               </div>
               <p class="programme-updated" id="client-plan-updated"></p>
             </section>
@@ -170,6 +164,15 @@
             <section class="dashboard-card coach-detail" id="coach-client-detail" hidden aria-labelledby="coach-detail-title">
               <button class="auth-back coach-back" id="coach-back" type="button">← Tous les clients</button>
               <div class="card-heading"><div><p class="card-kicker">SUIVI CLIENT</p><h3 id="coach-detail-title">Check-ins</h3></div></div>
+              <section class="checkin-schedule" aria-labelledby="checkin-schedule-title">
+                <h4 id="checkin-schedule-title">Jour de check-in</h4>
+                <form id="checkin-schedule-form">
+                  <label class="auth-field">Jour convenu avec le client<select name="weekday" required><option value="">Choisir le jour</option><option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option><option value="4">Jeudi</option><option value="5">Vendredi</option><option value="6">Samedi</option><option value="7">Dimanche</option></select></label>
+                  <p class="schedule-note">Le jour du check-in, le questionnaire doit être remis au plus tard à minuit (heure de Bruxelles), afin que tu puisses y répondre le lendemain.</p>
+                  <p class="inline-message" id="checkin-schedule-message" role="status"></p>
+                  <button class="auth-secondary" type="submit">Enregistrer le jour de check-in</button>
+                </form>
+              </section>
               <div class="timeline" id="coach-history"></div>
               <div class="dashboard-grid dashboard-grid--coach coach-client-tools">
                 <section class="dashboard-card" aria-labelledby="coach-plan-title">
@@ -178,14 +181,14 @@
                   <div class="nutrition-builder" id="nutrition-builder" aria-live="polite">
                     <p class="empty-state">Chargement du constructeur nutrition…</p>
                   </div>
-                    <label class="auth-field">Programme d’entraînement<textarea id="coach-training-plan" name="training_plan" rows="5" maxlength="6000" placeholder="Séances, exercices, séries et répétitions…"></textarea></label>
+                    <div id="training-builder"><p class="empty-state">Chargement du constructeur d’entraînement…</p></div>
                     <p class="inline-message" id="coach-plan-message" role="status" aria-live="polite"></p>
                     <button class="auth-primary dashboard-submit" id="coach-plan-submit" type="submit">Enregistrer le programme</button>
                   </form>
                 </section>
                 <section class="dashboard-card" aria-labelledby="coach-progress-title">
                   <div class="card-heading"><div><p class="card-kicker">SUIVI CORPOREL</p><h3 id="coach-progress-title">Progression</h3></div></div>
-                  <div class="progress-history" id="coach-progress-history"><p class="empty-state">Chargement de la progression…</p></div>
+                  <div id="coach-training-history"></div><div class="progress-history" id="coach-progress-history"><p class="empty-state">Chargement de la progression…</p></div>
                 </section>
               </div>
             </section>
@@ -218,7 +221,7 @@
       </form>
     </dialog>
 
-    <script type="module" src="./main.js?v=16"></script>
-    <script type="module" src="./auth.js?v=16"></script>
+    <script type="module" src="./main.js?v=17"></script>
+    <script type="module" src="./auth.js?v=17"></script>
   </body>
 </html>

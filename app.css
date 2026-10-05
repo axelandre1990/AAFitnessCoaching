@@ -364,3 +364,47 @@ h1 span { color: #a1aaa7; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Structured weekly check-ins and training sessions */
+.schedule-note { border-left: 3px solid var(--tiffany, #80D9CF); padding: 12px 16px; color: #bdcecb; background: #80d9cf0a; line-height: 1.6; font-size: .92rem; }
+.weekly-status { color: #80D9CF; line-height: 1.6; }
+.weekly-section, .weekly-answers, .client-session, .training-library, .training-history { border: 1px solid #ffffff18; border-radius: 16px; margin: 16px 0; padding: 16px; min-width: 0; }
+.weekly-section summary, .weekly-answers summary, .client-session summary, .training-library summary, .training-history summary { cursor: pointer; padding: 12px 0; font-weight: 600; line-height: 1.5; }
+.weekly-question { margin: 24px 0; }
+.weekly-question__label { color: #edf4f2; line-height: 1.55; }
+.weekly-question__hint, .scale-legend { color: #a4b7b3; font-size: .85rem; line-height: 1.6; }
+.question-error { color: #ffa8a8; font-size: .85rem; }
+.auth-field select, .training-settings select, .training-settings input { width: 100%; min-height: 48px; border: 1px solid #ffffff28; border-radius: 12px; padding: 12px; background: #101817; color: #f0f5f4; font: inherit; }
+.auth-field select:focus, .training-settings select:focus { outline: 2px solid #80D9CF; outline-offset: 2px; }
+.checkin-schedule { margin: 24px 0; border-bottom: 1px solid #ffffff18; padding-bottom: 24px; }
+.checkin-schedule h4 { font-size: 1.2rem; }
+.checkin-scores, .exercise-media-row, .exercise-actions, .training-days { display:flex; flex-wrap:wrap; gap:10px; margin:16px 0; }
+.checkin-scores .status-pill { white-space:normal; }
+.weekly-answer { padding: 12px 0; border-top:1px solid #ffffff14; }
+.weekly-answer h4 { line-height:1.5; font-size:.95rem; margin:8px 0; }
+.weekly-answer p, .training-history p, .training-exercise p { white-space:pre-wrap; overflow-wrap:anywhere; }
+.training-title {font-size:1.35rem; margin:32px 0 16px;}
+.training-settings, .exercise-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:16px 0; }
+.training-exercise { border:1px solid #ffffff1d; border-radius:16px; padding:18px; margin:18px 0; min-width:0; }
+.training-exercise h4 { margin:0 0 12px; line-height:1.5; }
+.training-days button { padding:12px 18px; width:auto; min-height:48px; }
+.exercise-results { max-height:320px; overflow:auto; display:grid; gap:8px; margin-top:16px; }
+.exercise-result { display:flex; flex-direction:column; gap:5px; width:100%; text-align:left; border:1px solid #ffffff20; border-radius:12px; background:#ffffff05; color:#edf4f2; padding:14px; cursor:pointer; }
+.exercise-result:hover { border-color:#80D9CF; }
+.exercise-result span {color:#9eafac; font-size:.8rem;}
+.exercise-media {color:#80D9CF; font-size:.85rem;}
+.text-action {background:transparent; border:1px solid #ffffff25; border-radius:10px; color:#bad5d0; padding:10px 12px; cursor:pointer; min-height:44px;}
+.text-action:disabled { opacity:.35; cursor:default; }
+.workout-set { display:grid; grid-template-columns:minmax(90px,.8fr) repeat(2,minmax(0,1fr)); gap:12px; align-items:center; margin:16px 0; }
+.set-done {display:flex; align-items:center; gap:10px; color:#c2d2ce;}
+.set-done input { accent-color:#80D9CF; width:22px; height:22px; }
+.last-performance {color:#80D9CF; font-size:.85rem;}
+.programme-grid {grid-template-columns:1fr;}
+.workout-form > button {width:100%;}
+@media(max-width:560px){
+ .training-settings,.exercise-fields {grid-template-columns:1fr;}
+ .workout-set {grid-template-columns:repeat(2,minmax(0,1fr));}
+ .workout-set .set-done {grid-column:1/-1;}
+ .training-exercise,.weekly-section,.client-session {padding:14px;}
+ .training-days button {font-size:.85rem; padding:10px 12px;}
+}
