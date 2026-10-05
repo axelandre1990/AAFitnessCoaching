@@ -9,7 +9,8 @@ import {
   submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=15";
+} from "./data.js?v=16";
+import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=16";
 
 const shell = document.querySelector("#signed-in-panel");
 const clientView = document.querySelector("#client-dashboard");
@@ -24,6 +25,7 @@ const coachProgress = document.querySelector("#coach-progress-history");
 let activeRole = null;
 let selectedClient = null;
 let activeClientId = null;
+let nutritionBuilder = null;
 
 function announce(element, text, kind = "") {
   element.textContent = text;
@@ -125,7 +127,7 @@ async function loadClient(clientId) {
     } else {
       for (const checkIn of checkIns) clientHistory.append(renderCheckIn(checkIn));
     }
-    document.querySelector("#client-nutrition-plan").textContent = plan?.nutrition_plan || "Ton coach n’a pas encore ajouté de repères nutrition.";
+    renderClientNutrition(document.querySelector("#client-nutrition-plan"), plan?.nutrition_plan || "");
     document.querySelector("#client-training-plan").textContent = plan?.training_plan || "Ton coach n’a pas encore ajouté de programme d’entraînement.";
     document.querySelector("#client-plan-updated").textContent = plan?.updated_at ? `Mis à jour le ${dateLabel(plan.updated_at)}` : "Ton programme apparaîtra ici dès que ton coach l’aura préparé.";
     await loadProgressHistory(clientProgress, clientId, "Aucune mesure enregistrée pour le moment.");
@@ -178,7 +180,7 @@ async function showClientHistory(clientId, clientName) {
       for (const checkIn of checkIns) coachHistory.append(renderCheckIn(checkIn, { coachMode: true }));
     }
     const planForm = document.querySelector("#coach-plan-form");
-    planForm.elements.nutrition_plan.value = plan?.nutrition_plan || "";
+    nutritionBuilder = await mountNutritionBuilder(document.querySelector("#nutrition-builder"), plan?.nutrition_plan || "");
     planForm.elements.training_plan.value = plan?.training_plan || "";
     announce(document.querySelector("#coach-plan-message"), plan?.updated_at ? `Dernière mise à jour · ${dateLabel(plan.updated_at)}` : "Aucun programme enregistré.");
     await loadProgressHistory(coachProgress, clientId, "Ce client n’a pas encore saisi de mesure.");
@@ -196,6 +198,8 @@ export function unmountDashboard() {
   blockedView.hidden = true;
   coachGrid.hidden = false;
   document.querySelector("#coach-client-detail").hidden = true;
+  nutritionBuilder = null;
+  document.querySelector("#nutrition-builder").replaceChildren();
   clientHistory.replaceChildren();
   coachHistory.replaceChildren();
   clientList.replaceChildren();
@@ -285,7 +289,8 @@ document.querySelector("#coach-plan-form").addEventListener("submit", async (eve
   button.textContent = "Enregistrement…";
   announce(message, "Enregistrement du programme…");
   try {
-    const plan = await saveClientPlan(selectedClient.id, { nutritionPlan: form.elements.nutrition_plan.value, trainingPlan: form.elements.training_plan.value });
+    if (!nutritionBuilder) throw new Error("Le constructeur nutrition n’est pas disponible. Recharge la page et réessaie.");
+    const plan = await saveClientPlan(selectedClient.id, { nutritionPlan: nutritionBuilder.serialize(), trainingPlan: form.elements.training_plan.value });
     announce(message, `Programme enregistré · ${dateLabel(plan.updated_at)}`, "success");
   } catch (error) {
     announce(message, error.message, "error");

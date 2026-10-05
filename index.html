@@ -175,7 +175,9 @@
                 <section class="dashboard-card" aria-labelledby="coach-plan-title">
                   <div class="card-heading"><div><p class="card-kicker">PROGRAMME CLIENT</p><h3 id="coach-plan-title">Nutrition et entraînement</h3></div></div>
                   <form id="coach-plan-form">
-                    <label class="auth-field">Repères nutrition<textarea id="coach-nutrition-plan" name="nutrition_plan" rows="5" maxlength="6000" placeholder="Repas, habitudes, objectifs…"></textarea></label>
+                  <div class="nutrition-builder" id="nutrition-builder" aria-live="polite">
+                    <p class="empty-state">Chargement du constructeur nutrition…</p>
+                  </div>
                     <label class="auth-field">Programme d’entraînement<textarea id="coach-training-plan" name="training_plan" rows="5" maxlength="6000" placeholder="Séances, exercices, séries et répétitions…"></textarea></label>
                     <p class="inline-message" id="coach-plan-message" role="status" aria-live="polite"></p>
                     <button class="auth-primary dashboard-submit" id="coach-plan-submit" type="submit">Enregistrer le programme</button>
@@ -216,7 +218,7 @@
       </form>
     </dialog>
 
-    <script type="module" src="./main.js?v=15"></script>
-    <script type="module" src="./auth.js?v=15"></script>
+    <script type="module" src="./main.js?v=16"></script>
+    <script type="module" src="./auth.js?v=16"></script>
   </body>
 </html>

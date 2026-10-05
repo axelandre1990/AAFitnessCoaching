@@ -1,6 +1,6 @@
-# AA Fitness Coaching V3
+# AA Fitness Coaching V4 (local build)
 
-Application web progressive, en français et conçue d’abord pour mobile. Les V2 et V3 fournissent une authentification e-mail, les espaces client et coach, les invitations, les check-ins et retours, des repères nutrition et entraînement par client, ainsi que le suivi du poids et du tour de taille. L’application utilise Supabase Auth et Postgres avec Row Level Security ; l’interface ne remplace jamais les contrôles d’accès de la base.
+Application web progressive, en français et conçue d’abord pour mobile. Les V2 et V3 fournissent une authentification e-mail, les espaces client et coach, les invitations, les check-ins et retours, les programmes par client et le suivi de mesures. V4 ajoute au coach un constructeur de plans alimentaires structurés, une recherche alimentaire et des totaux calculés par repas. L’application utilise Supabase Auth et Postgres avec Row Level Security ; l’interface ne remplace jamais les contrôles d’accès de la base.
 
 ## Aperçu local
 
@@ -16,7 +16,7 @@ Ouvre `http://localhost:4173`. L’installation PWA fonctionne sur localhost ou 
 
 Le code du navigateur n’embarque que la clé publique `publishable`. Ne place jamais de clé `service_role` dans les fichiers `scripts/` ni dans la page web.
 
-1. Dans le projet Supabase `kdoaxcocookckfwocscu`, ouvre **SQL Editor** et exécute les migrations dans l’ordre : `202610040001_aa_coaching_v2.sql`, puis `202610050001_aa_coaching_v3.sql`. V2 crée les profils, les affectations, les check-ins, les réponses et leurs politiques RLS. V3 ajoute les programmes nutrition/entraînement et les mesures privées du client, également protégés par RLS.
+1. Dans le projet Supabase `kdoaxcocookckfwocscu`, ouvre **SQL Editor** et exécute les migrations dans l’ordre : `202610040001_aa_coaching_v2.sql`, `202610050001_aa_coaching_v3.sql`, puis `202610050002_aa_coaching_v4_nutrition.sql`. V2 crée les profils, les affectations, les check-ins, les réponses et leurs politiques RLS. V3 ajoute les programmes et mesures privés. V4 augmente la limite de taille du plan nutrition pour stocker les repas et aliments structurés.
 2. Dans **Authentication → Sign In / Providers**, désactive l’inscription publique (**Allow new users to sign up**). Les nouveaux clients doivent passer par l’invitation du coach. Pour le premier compte coach, invite ton adresse depuis **Authentication → Users** (ou utilise ton compte AA existant), puis confirme-la. Dans SQL Editor, remplace `TON_EMAIL` par cette adresse et exécute ce SQL pour attribuer le rôle coach au propriétaire :
 
    ```sql
@@ -50,10 +50,12 @@ Si la migration ou la fonction n’est pas encore installée, l’application af
 - Le coach peut inviter ou rattacher un compte, consulter les check-ins des clients affectés et répondre à chacun. La réponse et le passage au statut « répondu » sont enregistrés dans une seule transaction.
 - Le coach peut enregistrer des repères nutrition et un programme d’entraînement en texte pour chaque client ; le client les retrouve dans son espace.
 - Le client peut saisir son poids, son tour de taille et une note facultative. Le client et son coach peuvent consulter les 24 dernières mesures.
+- Le coach peut définir des objectifs journaliers, composer jusqu’à six repas depuis le catalogue, régler les quantités en grammes et consulter les totaux calories/macros. Les clients voient le plan et ses aliments depuis leur espace.
+- Le catalogue contient les aliments existants exploitables, Ciqual 2025 et plusieurs jeux génériques USDA. Les sources, versions et attributions sont listées dans `data/FOOD-DATA-SOURCES.md`.
 - Une session sans profil ou rôle valide reste bloquée. Le service worker ne met en cache que les fichiers statiques de l’application, jamais les données client.
 
-Les programmes nutrition et entraînement sont des repères écrits par le coach ; V3 n’inclut pas encore de journal alimentaire, de bibliothèque d’exercices ni de calcul automatique.
+Le constructeur nutrition est un éditeur de plan, pas un journal alimentaire. L’éditeur de séances à partir de la bibliothèque d’exercices n’est pas encore intégré.
 
-## Ce qui reste pour V4
+## À prévoir ensuite
 
-Graphiques de progression, photos, messagerie temps réel, notifications push et fournisseurs sociaux restent à ajouter.
+Bibliothèque et constructeur d’entraînement, check-in hebdomadaire configurable, photos, graphiques de progression, messagerie temps réel, notifications push et fournisseurs sociaux restent à ajouter.

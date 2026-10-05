@@ -1,4 +1,4 @@
-const CACHE_NAME = "aa-fitness-coaching-shell-v3";
+const CACHE_NAME = "aa-fitness-coaching-shell-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const APP_SHELL = [
   "./supabase.js",
   "./data.js",
   "./dashboard.js",
+  "./nutrition-builder.js",
   "./aa-logo.png",
   "./icon-192.png",
   "./icon-512.png"
