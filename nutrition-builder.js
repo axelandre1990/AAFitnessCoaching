@@ -44,11 +44,12 @@ function nutrientsFor(food, grams) {
     fat_g: Number(base.fat_g || 0) * scale,
     fiber_g: base.fiber_g == null ? null : Number(base.fiber_g) * scale
   };
-  return { ...nutrients, kcal: macroCalories(nutrients) ?? 0 };
+  return { ...nutrients, kcal: hasValue(base.kcal) && Number.isFinite(Number(base.kcal)) && Number(base.kcal)>=0 ? Number(base.kcal)*scale : null };
 }
 
 function addNutrients(total, contribution) {
   for (const key of ["kcal", "protein_g", "carbs_g", "fat_g"]) total[key] += contribution[key] || 0;
+  if(contribution.kcal===null)total.kcal_missing=true;
   if (contribution.fiber_g != null) {
     total.fiber_g += contribution.fiber_g;
     total.fiber_count += 1;
@@ -56,13 +57,12 @@ function addNutrients(total, contribution) {
 }
 
 function emptyTotals() {
-  return { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0, fiber_count: 0, fiber_missing: false };
+  return { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0, fiber_count: 0, fiber_missing: false, kcal_missing: false };
 }
 
 export function dailyTotals(meals = []) {
   const totals = emptyTotals();
   for (const meal of meals) for (const item of meal.items || []) addNutrients(totals, nutrientsFor(item, item.grams));
-  totals.kcal = macroCalories(totals) ?? 0;
   return totals;
 }
 
@@ -81,6 +81,7 @@ function renderComparison(container, targets, meals) {
     for (const [key, , precision] of columns) {
       const goal = hasValue(targets[key]) && Number.isFinite(Number(targets[key])) ? Number(targets[key]) : null;
       let value = type === "theory" ? goal : type === "actual" ? actual[key] : goal === null ? null : actual[key] - goal;
+      if(key==="kcal" && type!=="theory" && actual.kcal_missing)value=null;
       if (key === "fiber_g" && type !== "theory" && actual.fiber_missing && (!actual.fiber_count || type === "delta")) value = null;
       const cell = node("td"); cell.dataset.metric = key; cell.dataset.value = value === null ? "" : String(value);
       let rounded = value === null ? null : Number(value.toFixed(precision));
@@ -93,7 +94,7 @@ function renderComparison(container, targets, meals) {
     body.append(row);
   }
   table.append(body);
-  container.replaceChildren(table, node("p", "nutrition-comparison__note", "Écart = plan actuel − objectif, sur les valeurs affichées. Calories du plan calculées avec 4 × protéines + 4 × glucides + 9 × lipides. Les fibres ne participent pas à ce calcul ; leurs données manquantes sont signalées."));
+  container.replaceChildren(table, node("p", "nutrition-comparison__note", "Écart = plan actuel − objectif, sur les valeurs affichées. Calories du plan additionnées depuis les valeurs énergétiques des aliments, selon les quantités. Les données manquantes sur les fibres sont signalées."));
 }
 
 function sourceNote(className) {
@@ -112,7 +113,7 @@ function sourceNote(className) {
 
 function totalsLabel(totals) {
   const fiber = totals.fiber_count ? `${FORMAT.format(totals.fiber_g)} g fibres` : "fibres n.d.";
-  return `${Math.round(macroCalories(totals) ?? 0)} kcal · P ${FORMAT.format(totals.protein_g)} g · G ${FORMAT.format(totals.carbs_g)} g · L ${FORMAT.format(totals.fat_g)} g · ${fiber}${totals.fiber_missing && totals.fiber_count ? " (partiel)" : ""}`;
+  return `${Math.round(totals.kcal)} kcal${totals.kcal_missing ? " (partiel)" : ""} · P ${FORMAT.format(totals.protein_g)} g · G ${FORMAT.format(totals.carbs_g)} g · L ${FORMAT.format(totals.fat_g)} g · ${fiber}${totals.fiber_missing && totals.fiber_count ? " (partiel)" : ""}`;
 }
 
 async function loadCatalog() {
@@ -214,7 +215,7 @@ async function mountNutritionCore(container, savedValue = "") {
   for (const [label, key, step] of targetFields) {
     const fieldNode = field(label, key, "number", step);
     fieldNode.querySelector("input").value = state.targets[key] ?? "";
-    if (key === "kcal") {
+    if (key === "kcal" || key === "fiber_g") {
       fieldNode.querySelector("input").readOnly = true;
       fieldNode.querySelector("input").placeholder = "Calcul automatique";
     } else fieldNode.querySelector("input").addEventListener("input", (event) => {
@@ -229,9 +230,11 @@ async function mountNutritionCore(container, savedValue = "") {
     const anyMacro = MACRO_KEYS.some(key => hasValue(state.targets[key]));
     state.targets.kcal = keepLegacy ? saved.targets.kcal : anyMacro ? macroCalories(state.targets) : null;
     targets.querySelector('input[name="kcal"]').value = state.targets.kcal ?? "";
+    state.targets.fiber_g=hasValue(state.targets.kcal)?Number((Number(state.targets.kcal)*0.014).toFixed(2)):null;
+    targets.querySelector('input[name="fiber_g"]').value=state.targets.fiber_g??"";
     formulaNote.textContent = keepLegacy
       ? "Objectif calorique antérieur conservé. Dès que tu modifies les macros, les calories sont recalculées automatiquement avec la formule 4 / 4 / 9."
-      : "Calories automatiques : 4 kcal/g de protéines + 4 kcal/g de glucides + 9 kcal/g de lipides. Renseigne les macros ci-dessus ; le total se calcule tout seul.";
+      : "Calories automatiques : 4 kcal/g de protéines + 4 kcal/g de glucides + 9 kcal/g de lipides. Renseigne les macros ci-dessus ; le total se calcule tout seul. Fibres théoriques : 0,014 × calories théoriques.";
     renderComparison(comparison, state.targets, state.meals);
   };
 
@@ -434,7 +437,7 @@ function renderNutritionCore(target, savedValue) {
     ["Protéines", plan.targets?.protein_g, "g"],
     ["Glucides", plan.targets?.carbs_g, "g"],
     ["Lipides", plan.targets?.fat_g, "g"],
-    ["Fibres", plan.targets?.fiber_g, "g"]
+    ["Fibres", hasValue(MACRO_KEYS.every(key => hasValue(plan.targets?.[key])) ? macroCalories(plan.targets) : plan.targets?.kcal) ? Number(((MACRO_KEYS.every(key => hasValue(plan.targets?.[key])) ? macroCalories(plan.targets) : Number(plan.targets.kcal))*0.014).toFixed(2)) : null, "g"]
   ].filter(([, value]) => value != null);
   if (targetList.length) {
     const targets = node("div", "client-nutrition-targets");
@@ -442,7 +445,7 @@ function renderNutritionCore(target, savedValue) {
     target.append(targets);
   }
   if (plan.notes) target.append(node("p", "programme-copy__notes", plan.notes));
-  if (plan.meals.some(meal => meal.items?.length)) target.append(node("p", "client-nutrition-daily", `Total du plan par jour (4 / 4 / 9) : ${totalsLabel(dailyTotals(plan.meals))}`));
+  if (plan.meals.some(meal => meal.items?.length)) target.append(node("p", "client-nutrition-daily", `Total du plan par jour (calories des aliments) : ${totalsLabel(dailyTotals(plan.meals))}`));
   const meals = node("div", "client-nutrition-meals");
   let hasItems = false;
   for (const meal of plan.meals) {
