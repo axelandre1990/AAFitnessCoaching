@@ -1,0 +1,30 @@
+begin;
+insert into auth.users(id,email) values ('00000000-0000-4000-a000-000000000251','aa-v25-coach@example.invalid'),('00000000-0000-4000-a000-000000000252','aa-v25-client@example.invalid'),('00000000-0000-4000-a000-000000000253','aa-v25-other@example.invalid');
+update public.profiles set role='coach' where id='00000000-0000-4000-a000-000000000251';
+insert into public.coach_clients(coach_id,client_id) values('00000000-0000-4000-a000-000000000251','00000000-0000-4000-a000-000000000252');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-a000-000000000251',true);
+insert into public.coaching_annual_roadmaps(client_id,plan) values('00000000-0000-4000-a000-000000000252',jsonb_build_object('start_date',current_date::text,'title','Parcours fictif','goal','Repères fictifs','phases','[{"id":"phase1","start_week":1,"end_week":12,"title":"Phase fictive","targets":{"standard_calories":2000,"steps_goal":8000}}]'::jsonb));
+do $$declare failed boolean;begin
+ failed:=false;begin update public.coaching_annual_roadmaps set revision=2,plan=plan||'{"phases":[{"id":"a","start_week":1,"end_week":10,"title":"A"},{"id":"b","start_week":10,"end_week":15,"title":"B"}]}' where client_id='00000000-0000-4000-a000-000000000252';exception when others then if sqlerrm='Deux phases se chevauchent.' then failed:=true;else raise;end if;end;if not failed then raise exception 'FAIL overlap';end if;
+ failed:=false;begin update public.coaching_annual_roadmaps set revision=1 where client_id='00000000-0000-4000-a000-000000000252';exception when others then if sqlerrm like 'Révision invalide%' then failed:=true;else raise;end if;end;if not failed then raise exception 'FAIL revision';end if;
+ failed:=false;begin update public.coaching_annual_roadmaps set revision=2,plan=plan||'{"phases":[{"id":"a","start_week":1,"end_week":53,"title":"A"}]}' where client_id='00000000-0000-4000-a000-000000000252';exception when others then if sqlerrm='Semaines hors limites.' then failed:=true;else raise;end if;end;if not failed then raise exception 'FAIL 53 weeks';end if;
+end $$;
+update public.coaching_annual_roadmaps set revision=2,plan=plan||'{"goal":"Objectif actualisé fictif"}' where client_id='00000000-0000-4000-a000-000000000252';
+select public.aa_save_tracking_settings('00000000-0000-4000-a000-000000000252',array['weight_kg','biofeedback1','biofeedback2','biofeedback3'],false,true,0);
+insert into public.coaching_analysis_settings(client_id,settings) values('00000000-0000-4000-a000-000000000252','{"biofeedback_labels":{"biofeedback1":"Régularité","biofeedback2":"Motivation","biofeedback3":"Qualité récupération"},"measurement_cadence_days":28}');
+insert into public.coaching_roadmap(client_id,week_start,prescription) values('00000000-0000-4000-a000-000000000252',date_trunc('week',current_date)::date,'{"mode":"highLow","high":{"protein_g":150,"carbs_g":200,"fat_g":60},"low":{"protein_g":150,"carbs_g":150,"fat_g":60},"coach_grade":"Fictif"}');
+select set_config('request.jwt.claim.sub','00000000-0000-4000-a000-000000000252',true);
+select public.aa_save_daily(current_date,'{"weight_kg":80,"biofeedback1":5,"biofeedback2":6,"biofeedback3":7}',0,1);
+insert into public.client_day_types values(auth.uid(),current_date,'high');
+do $$declare failed boolean:=false;begin
+ if(select count(*) from public.coaching_annual_roadmaps)<>1 then raise exception 'FAIL client read';end if;
+ begin update public.coaching_annual_roadmaps set revision=3,plan=plan||'{"goal":"Forbidden client edit"}' where client_id=auth.uid();if found then raise exception 'FAIL client annual edit';end if;exception when insufficient_privilege then null;end;
+ begin perform public.aa_save_daily(current_date,'{"biofeedback1":11}',1,1);exception when others then if sqlerrm like 'Valeur hors limites%' then failed:=true;else raise;end if;end;if not failed then raise exception 'FAIL custom bounds';end if;
+end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-a000-000000000253',true);
+do $$begin if exists(select 1 from public.coaching_annual_roadmaps) or exists(select 1 from public.coaching_analysis_settings) then raise exception 'FAIL other client read';end if;end $$;
+reset role;
+do $$begin if has_table_privilege('anon','public.coaching_annual_roadmaps','select') or has_table_privilege('anon','public.coaching_annual_roadmaps','insert') then raise exception 'FAIL anon';end if;end $$;
+rollback;
+select 'V25 annual plan, overlaps, revisions, RLS, custom feedback, high-low targets passed; synthetic fixtures rolled back' as result;
