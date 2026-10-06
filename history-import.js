@@ -1,9 +1,9 @@
-import {supabase} from './supabase.js?v=23';
-import {METRICS,validateMetrics,todayBrussels} from './tracking-model.js?v=23';
-import {QUESTIONS,validateAnswers} from './coaching-model.js?v=23';
-import {monday,addDays} from './analysis-model.js?v=23';
-import {n,select,button,table} from './analysis-ui.js?v=23';
-import {result} from './analysis-data.js?v=23';
+import {supabase} from './supabase.js?v=24';
+import {METRICS,validateMetrics,todayBrussels} from './tracking-model.js?v=24';
+import {QUESTIONS,validateAnswers} from './coaching-model.js?v=24';
+import {monday,addDays} from './analysis-model.js?v=24';
+import {n,select,button,table} from './analysis-ui.js?v=24';
+import {result} from './analysis-data.js?v=24';
 export function parseCSV(text){
  const first=text.split(/\r?\n/,1)[0],separator=first.split(';').length>first.split(',').length?';':',';let rows=[],row=[],cell='',quoted=false;
  for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(c===separator&&!quoted){row.push(cell);cell='';}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell='';}else cell+=c;}if(quoted)throw Error('Guillemets CSV non fermés.');row.push(cell);if(row.some(x=>x.trim()))rows.push(row);if(!rows.length)throw Error('Fichier vide.');rows[0][0]=rows[0][0].replace(/^\uFEFF/,'');if(rows.length>731)throw Error('Maximum 730 lignes par import.');return rows;

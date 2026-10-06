@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js?v=23";
+import { supabase } from "./supabase.js?v=24";
 
 function throwIfError(error) {
   if (!error) return;
@@ -65,20 +65,11 @@ export async function saveClientPlan(clientId, { nutritionPlan, trainingPlan }) 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   throwIfError(authError);
   if (!user) throw new Error("Ta session a expiré. Reconnecte-toi pour modifier le programme.");
-  const plan = {
-    client_id: clientId,
-    coach_id: user.id,
-    nutrition_plan: String(nutritionPlan || "").trim(),
-    training_plan: String(trainingPlan || "").trim(),
-    updated_at: new Date().toISOString()
-  };
-  const { data, error } = await supabase
-    .from("client_plans")
-    .upsert(plan, { onConflict: "client_id" })
-    .select("nutrition_plan, training_plan, updated_at")
-    .single();
+  const { data, error } = await supabase.rpc("aa_save_client_plan", {
+    target_client:clientId, nutrition:String(nutritionPlan||"").trim(), training:String(trainingPlan||"").trim()
+  });
   throwIfError(error);
-  return data;
+  return Array.isArray(data)?data[0]:data;
 }
 
 export async function getProgressEntries(clientId) {

@@ -115,3 +115,6 @@ Le suivi journalier affiche sous sa note de contexte les exemples fournis par le
 - L’option macro timing n’est pas incluse.
 
 Les moyennes ignorent les valeurs manquantes et conservent les zéros. Les objectifs de macros moyens nécessitent les types de jours encodés; la complétude figure séparément. Les données des relevés quotidiens constituent la source des analyses.
+
+## V24
+Calories du plan = somme des kcal source par portion. Calories théoriques restent calculées sur les macros. Fibres théoriques automatiques = 0,014 × calories théoriques. Enregistrement via RPC invoker ciblée, avec permissions de colonnes et RLS existantes.

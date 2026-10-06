@@ -1,7 +1,7 @@
-import { parseTrainingPlan } from "./coaching-model.js?v=23";
-import { mountTracking } from "./tracking.js?v=23";
-import { mountPhotos } from "./progress-photos.js?v=23";
-import { mountAnalysis } from "./analysis.js?v=23";
+import { parseTrainingPlan } from "./coaching-model.js?v=24";
+import { mountTracking } from "./tracking.js?v=24";
+import { mountPhotos } from "./progress-photos.js?v=24";
+import { mountAnalysis } from "./analysis.js?v=24";
 let trackingModules = [];
 async function loadTracking(target, photosTarget, clientId, coach, valid) {
  const content=document.createElement('div'),photoContent=document.createElement('div');
@@ -33,11 +33,11 @@ import {
   submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=23";
-import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=23";
+} from "./data.js?v=24";
+import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=24";
 
-import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=23";
-import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=23";
+import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=24";
+import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=24";
 let weeklyCheckin = null;
 let trainingBuilder = null;
 let detailRevision = 0;

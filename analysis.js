@@ -1,10 +1,10 @@
-import {renderWeeklyAnswers} from './weekly-checkin.js?v=23';
-import {supabase} from './supabase.js?v=23';
-import {todayBrussels,METRICS} from './tracking-model.js?v=23';
-import {DEFAULT_ANALYSIS,calculateMacros,numberOrNull,energy,monday,addDays,weeklySummary,trainingSeries,effectivePrescription} from './analysis-model.js?v=23';
-import {loadAnalysis,result,saveRevision} from './analysis-data.js?v=23';
-import {n,fmt,field,select,button,section,table,chart} from './analysis-ui.js?v=23';
-import {mountHistoryImport} from './history-import.js?v=23';
+import {renderWeeklyAnswers} from './weekly-checkin.js?v=24';
+import {supabase} from './supabase.js?v=24';
+import {todayBrussels,METRICS} from './tracking-model.js?v=24';
+import {DEFAULT_ANALYSIS,calculateMacros,numberOrNull,energy,monday,addDays,weeklySummary,trainingSeries,effectivePrescription} from './analysis-model.js?v=24';
+import {loadAnalysis,result,saveRevision} from './analysis-data.js?v=24';
+import {n,fmt,field,select,button,section,table,chart} from './analysis-ui.js?v=24';
+import {mountHistoryImport} from './history-import.js?v=24';
 const macroFields=[['protein_g','Protéines (g)'],['carbs_g','Glucides (g)'],['fat_g','Lipides (g)'],['fiber_g','Fibres (g)']];
 const metricLabel=k=>METRICS.find(m=>m[0]===k)?.[1]||({calories:'Calories',protein_g:'Protéines',carbs_g:'Glucides',fat_g:'Lipides',fiber_g:'Fibres',bp_systolic:'Pression systolique',bp_diastolic:'Pression diastolique'})[k]||k;
 const macroLabel=m=>m?`${fmt(energy(m))} kcal · P ${fmt(m.protein_g)} / G ${fmt(m.carbs_g)} / L ${fmt(m.fat_g)} g`:'—';

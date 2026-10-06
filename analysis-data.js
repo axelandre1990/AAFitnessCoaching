@@ -1,6 +1,6 @@
-import {supabase} from './supabase.js?v=23';
-import {todayBrussels} from './tracking-model.js?v=23';
-import {addDays} from './analysis-model.js?v=23';
+import {supabase} from './supabase.js?v=24';
+import {todayBrussels} from './tracking-model.js?v=24';
+import {addDays} from './analysis-model.js?v=24';
 export async function result(q){const {data,error}=await q;if(error)throw Error(error.message);return data;}
 export async function allRows(table,clientId,{columns='*',order='recorded_on',since=null}={}){let rows=[];for(let start=0;;start+=500){let q=supabase.from(table).select(columns).eq('client_id',clientId).order(order,{ascending:true});if(since)q=q.gte(order,since);const batch=await result(q.range(start,start+499))||[];rows.push(...batch);if(batch.length<500)break;}return rows;}
 export async function loadAnalysis(clientId){const since=addDays(todayBrussels(),-730);const [settings,entries,roadmap,measurements,dayTypes,sessions,versions,checkIns]=await Promise.all([
