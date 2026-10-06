@@ -28,7 +28,7 @@ export function weeklySummary(entries,roadmap=[],dayTypes=[],extraWeeks=[]){
  const result=[...weeks].sort(([a],[b])=>a.localeCompare(b)).map(([week,rows])=>{
  const metrics={};for(const key of keys)metrics[key]=mean(rows.map(r=>key==='fasting_glucose'&&r.metrics[key]!=null?(r.metrics.glucose_unit==='mmol_l'?r.metrics[key]*18.0182:r.metrics.glucose_unit==='mg_dl'?r.metrics[key]:null):r.metrics[key]));
  const goalKeys=['protein_g','carbs_g','fat_g','fiber_g','kcal','steps_goal','sleep_goal'];const goals={};
- for(const key of goalKeys){const vals=Array.from({length:7},(_,i)=>{const date=addDays(week,i),p=effectivePrescription(roadmap,date);if(!p)return null;if(key.endsWith('_goal'))return p[key];const type=dayTypes.find(d=>d.recorded_on===date)?.day_type;if(!type)return null;return key==='kcal'?energy(p[type]):p[type]?.[key];});goals[key]=mean(vals);}
+ for(const key of goalKeys){const vals=Array.from({length:7},(_,i)=>{const date=addDays(week,i),p=effectivePrescription(roadmap,date);if(!p)return null;if(key.endsWith('_goal'))return p[key];const type=p.mode==='standard'?'standard':dayTypes.find(d=>d.recorded_on===date)?.day_type;if(!type)return null;return key==='kcal'?energy(p[type]):p[type]?.[key];});goals[key]=mean(vals);}
  return {week,rows,days:rows.length,metrics,goals,glucoseUnit:'mg/dL',dayTypesCount:Array.from({length:7},(_,i)=>dayTypes.some(d=>d.recorded_on===addDays(week,i))).filter(Boolean).length};});
  for(let i=0;i<result.length;i++){const row=result[i],previous=result[i-1];const a=row.metrics.weight_kg?.value,b=previous?.metrics.weight_kg?.value;row.weightDelta=a!=null&&b!=null&&addDays(previous.week,7)===row.week?a-b:null;row.weightPct=row.weightDelta!==null&&b!==0?row.weightDelta/b*100:null;}
  return result;

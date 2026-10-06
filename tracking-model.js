@@ -1,6 +1,7 @@
 export const METRICS = [
  ['weight_kg','Poids','kg',20,400,.1],['waist_cm','Tour de taille','cm',30,250,.1],['steps','Pas','pas',0,100000,1],['sleep_hours','Sommeil','h',0,24,.1],
  ...['recovery:Récupération','energy:Énergie','digestion:Digestion','stress:Stress','hunger:Faim'].map(s=>{const [k,l]=s.split(':');return [k,l,'/10',1,10,1];}),
+ ...[1,2,3].map(index=>[`biofeedback${index}`,`Suivi personnalisé ${index}`,'/10',1,10,1]),
  ['water_l','Eau','L',0,20,.1],['salt_g','Sel','g',0,100,.1],['resting_hr','Fréquence cardiaque au repos','bpm',0,300,1],['fasting_glucose','Glycémie à jeun','',0,1000,.1],['blood_pressure','Pression artérielle','mmHg'],['menstruation','Menstruations',''],['notes','Notes','']
 ];
 export const DEFAULT_SETTINGS={enabled_metrics:['weight_kg','waist_cm','notes'],macro_tracking:false,photos_enabled:true,revision:0};
@@ -20,4 +21,12 @@ export function validateMetrics(m,settings){
  if(m.fasting_glucose!=null&&!m.glucose_unit)throw Error('Choisis l’unité de glycémie.');
  if(['protein_g','carbs_g','fat_g'].some(k=>m[k]!=null)&&consumedCalories(m)===null)throw Error('Renseigne protéines, glucides et lipides, y compris zéro.');
  if(!Object.entries(m).some(([k,v])=>k!=='glucose_unit'&&v!==null&&v!==''))throw Error('Renseigne au moins une information.');return m;
+}
+
+export function metricLabel(settings, key) {
+ const fallback=METRICS.find(metric=>metric[0]===key)?.[1]||key;
+ if(!/^biofeedback[123]$/.test(key))return fallback;
+ const labels=settings?.biofeedback_labels;
+ const raw=Array.isArray(labels)?labels[Number(key.slice(-1))-1]:labels?.[key];
+ return typeof raw==='string' && raw.trim()?raw.trim().slice(0,80):fallback;
 }

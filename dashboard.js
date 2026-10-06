@@ -1,7 +1,12 @@
-import { parseTrainingPlan } from "./coaching-model.js?v=24";
-import { mountTracking } from "./tracking.js?v=24";
-import { mountPhotos } from "./progress-photos.js?v=24";
-import { mountAnalysis } from "./analysis.js?v=24";
+import {setupWorkspaces,routeAnalysis,selectWorkspace} from './workspace-ui.js?v=25';
+import {mountAnnualRoadmap} from './annual-roadmap.js?v=25';
+import {result,saveRevision} from './analysis-data.js?v=25';
+import {supabase} from './supabase.js?v=25';
+import {renderTrainingGuide} from './training-guide.js?v=25';
+import { parseTrainingPlan } from "./coaching-model.js?v=25";
+import { mountTracking } from "./tracking.js?v=25";
+import { mountPhotos } from "./progress-photos.js?v=25";
+import { mountAnalysis } from "./analysis.js?v=25";
 let trackingModules = [];
 async function loadTracking(target, photosTarget, clientId, coach, valid) {
  const content=document.createElement('div'),photoContent=document.createElement('div');
@@ -11,7 +16,9 @@ async function loadTracking(target, photosTarget, clientId, coach, valid) {
  const analysisTarget = document.querySelector(coach ? "#coach-analysis" : "#client-analysis");
  const analysisContent = document.createElement("div");
  const analysis = await mountAnalysis(analysisContent,clientId,{coach,applyTargets:(values,read=false)=>{if(!nutritionBuilder)throw Error("Le constructeur alimentaire est en cours de chargement. Réessaie dans un instant.");if(read)return nutritionBuilder.serialize();nutritionBuilder.setTargets(values);}});
- if(!valid()){analysis.destroy();return;} analysisTarget.replaceChildren(analysisContent); trackingModules.push(analysis);
+ if(!valid()){analysis.destroy();return;} analysisTarget.replaceChildren(analysisContent);routeAnalysis(coach?"coach":"client",analysis.sections||{});trackingModules.push(analysis);
+ const annualContent=document.createElement("div");const annual=await mountAnnualRoadmap(annualContent,clientId,{coach,load:id=>result(supabase.from("coaching_annual_roadmaps").select("*").eq("client_id",id).maybeSingle()),save:(id,plan,revision)=>saveRevision("coaching_annual_roadmaps",{client_id:id},"plan",plan,revision)});
+ if(!valid()){annual.destroy();return;}document.getElementById(coach?"coach-annual-roadmap":"client-annual-roadmap").replaceChildren(annualContent);trackingModules.push(annual);
  const photos = await mountPhotos(photoContent,clientId,{coach,enabled:tracking.settings?.photos_enabled ?? true});
  if (!valid()) { photos.destroy(); return; }
  photosTarget.replaceChildren(photoContent); trackingModules.push(photos);
@@ -33,11 +40,11 @@ import {
   submitProgressEntry,
   replyToCheckIn,
   inviteClient
-} from "./data.js?v=24";
-import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=24";
+} from "./data.js?v=25";
+import { mountNutritionBuilder, renderClientNutrition } from "./nutrition-builder.js?v=25";
 
-import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=24";
-import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=24";
+import { mountWeeklyCheckIn, renderWeeklyAnswers } from "./weekly-checkin.js?v=25";
+import { mountTrainingBuilder, renderClientTraining, renderTrainingHistory } from "./training.js?v=25";
 let weeklyCheckin = null;
 let trainingBuilder = null;
 let detailRevision = 0;
@@ -55,6 +62,7 @@ let activeRole = null;
 let selectedClient = null;
 let activeClientId = null;
 let nutritionBuilder = null;
+setupWorkspaces();
 
 function announce(element, text, kind = "") {
   element.textContent = text;
@@ -172,6 +180,7 @@ async function loadClient(clientId) {
       return [...new Map([...referenceHistory, ...updated].map(session=>[session.id,session])).values()];
     }});
     renderTrainingHistory(document.querySelector("#client-training-history"), history);
+ const guide=document.createElement("div");renderTrainingGuide(guide);document.querySelector("#client-training-plan").append(guide);
     document.querySelector("#client-plan-updated").textContent = plan?.updated_at ? `Mis à jour le ${dateLabel(plan.updated_at)}` : "Ton programme apparaîtra ici dès que ton coach l’aura préparé.";
     await loadProgressHistory(clientProgress, clientId, "Aucune mesure enregistrée pour le moment.");
   } catch (error) {
@@ -210,6 +219,7 @@ async function loadCoach() {
 }
 
 async function showClientHistory(clientId, clientName, checkinDay = null) {
+ selectWorkspace("coach","bilan");
   const revision = ++detailRevision;
  for (const module of trackingModules) module.destroy(); trackingModules=[];
  void loadTracking(document.querySelector("#coach-daily-tracking"),document.querySelector("#coach-progress-photos"),clientId,true,()=>activeRole==="coach" && revision===detailRevision);
@@ -248,7 +258,7 @@ async function showClientHistory(clientId, clientName, checkinDay = null) {
 
 export function unmountDashboard() {
  for (const module of trackingModules) module.destroy(); trackingModules=[];
- for (const id of ["client-daily-tracking","client-progress-photos","coach-daily-tracking","coach-progress-photos","coach-analysis","client-analysis"]) document.getElementById(id).replaceChildren();
+ for (const id of ["client-daily-tracking","client-progress-photos","coach-daily-tracking","coach-progress-photos","coach-analysis","client-analysis","coach-annual-roadmap","client-annual-roadmap"]) document.getElementById(id).replaceChildren();
   ++detailRevision;
   weeklyCheckin = null; trainingBuilder = null;
   activeRole = null;
@@ -344,7 +354,7 @@ document.querySelector("#coach-plan-form").addEventListener("submit", async (eve
     announce(message, error.message, "error");
   } finally {
     button.disabled = false;
-    button.textContent = "Enregistrer le programme";
+    button.textContent = "Enregistrer les programmes";
   }
 });
 

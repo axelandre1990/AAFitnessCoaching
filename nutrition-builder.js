@@ -11,6 +11,49 @@ export function macroCalories(macros = {}) {
   return Number((values[0] * 4 + values[1] * 4 + values[2] * 9).toFixed(2));
 }
 
+export function resolveMacroTargets(input = {}) {
+  const mode = input.mode || "grams";
+  const read = key => {
+    if (!hasValue(input[key])) throw new Error(`Renseigne ${key}.`);
+    const value = Number(input[key]);
+    if (!Number.isFinite(value) || value < 0) throw new Error(`Vérifie ${key} : nombre positif ou zéro.`);
+    return value;
+  };
+  let protein_g, carbs_g, fat_g;
+  if (mode === "grams") {
+    protein_g = read("protein_g"); carbs_g = read("carbs_g"); fat_g = read("fat_g");
+  } else if (mode === "percent") {
+    const kcal = read("calorieTarget"), protein = read("protein_percent"), carbs = read("carbs_percent"), fat = read("fat_percent");
+    if (Math.abs(protein + carbs + fat - 100) > 0.000001) throw new Error("Les pourcentages doivent totaliser 100 %. ");
+    protein_g = kcal * protein / 400; carbs_g = kcal * carbs / 400; fat_g = kcal * fat / 900;
+  } else if (mode === "perKg") {
+    const weight = read("bodyweightKg");
+    if (weight <= 0) throw new Error("Renseigne un poids supérieur à zéro en kg.");
+    protein_g = weight * read("protein_perKg"); fat_g = weight * read("fat_perKg");
+    carbs_g = input.carbsMethod === "ratio" ? weight * read("carbs_perKg") : (read("calorieTarget") - protein_g * 4 - fat_g * 9) / 4;
+    if (carbs_g < 0) throw new Error("La cible calorique ne couvre pas les protéines et les lipides saisis.");
+  } else throw new Error("Mode de saisie des macros inconnu.");
+  const result = { protein_g, carbs_g, fat_g };
+  result.kcal = macroCalories(result);
+  result.fiber_g = Number((result.kcal * 0.014).toFixed(2));
+  return result;
+}
+
+export function normalizeNutritionModes(plan = null) {
+  const variants = structuredClone(plan?.variants || {});
+  const base = plan ? { ...structuredClone(plan), variants: undefined, activeVariant: undefined, nutritionMode: undefined } : null;
+  const original = plan?.activeVariant;
+  if (base && !variants[original || "standard"]) variants[original || "standard"] = base;
+  if (!variants.standard) variants.standard = structuredClone(variants[original] || variants.high || variants.training || base);
+  // Historical entries remain stored under their original keys.
+  const mode = plan?.nutritionMode === "highLow" || (!plan?.nutritionMode && (original === "high" || original === "low")) ? "highLow" : "standard";
+  if (mode === "highLow") {
+    if (!variants.high) variants.high = structuredClone(variants.training || variants.standard);
+    if (!variants.low) variants.low = structuredClone(variants.rest || variants.standard);
+  }
+  return { mode, variants, current: mode === "highLow" && original === "low" ? "low" : mode === "highLow" ? "high" : "standard" };
+}
+
 function node(tag, className = "", text = "") {
   const result = document.createElement(tag);
   if (className) result.className = className;
@@ -153,7 +196,7 @@ function searchFoods(foods, query) {
 }
 
 function createDefaultMeals(existing = []) {
-  return Array.from({ length: MEAL_COUNT }, (_, index) => {
+  return Array.from({ length: Math.max(MEAL_COUNT, existing.length) }, (_, index) => {
     const meal = existing[index] || {};
     return {
       name: meal.name || `Repas ${index + 1}`,
@@ -171,6 +214,7 @@ async function mountNutritionCore(container, savedValue = "") {
   const state = {
     targets: { kcal: "", protein_g: "", carbs_g: "", fat_g: "", fiber_g: "", ...(saved.targets || {}) },
     meals: createDefaultMeals(saved.meals),
+    macroInput: { mode: "grams", ...(saved.macroInput || {}) },
     notes: saved.notes || parsed.legacy || ""
   };
   let foods;
@@ -238,6 +282,36 @@ async function mountNutritionCore(container, savedValue = "") {
     renderComparison(comparison, state.targets, state.meals);
   };
 
+  const inputControls = node("div", "nutrition-macro-input");
+  const inputLabel = node("label", "auth-field", "Saisie des objectifs macros");
+  const inputMode = document.createElement("select"); inputMode.setAttribute("aria-label", "Saisie des objectifs macros");
+  for (const [value, text] of [["grams", "Cibles en g/jour"], ["percent", "Pourcentages des calories"], ["perKg", "Ratios en g/kg de poids"]]) inputMode.append(new Option(text, value));
+  inputMode.value = state.macroInput.mode; inputLabel.append(inputMode);
+  const inputFields = node("div", "nutrition-targets"), inputError = node("p", "inline-message"); inputError.setAttribute("role", "status");
+  const applyMacroInput = () => {
+    try {
+      Object.assign(state.targets, resolveMacroTargets(state.macroInput)); macrosChanged = true;
+      for (const key of MACRO_KEYS) targets.querySelector(`[name="${key}"]`).value = state.targets[key];
+      inputError.textContent = ""; refreshDaily();
+    } catch (error) { inputError.textContent = error.message; }
+  };
+  const renderMacroInput = () => {
+    state.macroInput.mode = inputMode.value; inputFields.replaceChildren(); inputError.textContent = "";
+    for (const key of MACRO_KEYS) targets.querySelector(`[name="${key}"]`).readOnly = inputMode.value !== "grams";
+    let fields = inputMode.value === "percent" ? [["Cible du coach (kcal/jour)", "calorieTarget"], ["Protéines (%)", "protein_percent"], ["Glucides (%)", "carbs_percent"], ["Lipides (%)", "fat_percent"]] : inputMode.value === "perKg" ? [["Poids renseigné par le coach (kg)", "bodyweightKg"], ["Protéines (g/kg)", "protein_perKg"], ["Lipides (g/kg)", "fat_perKg"]] : [];
+    if (inputMode.value === "perKg") {
+      const label = node("label", "auth-field", "Calcul des glucides"), method = document.createElement("select"); method.setAttribute("aria-label", "Calcul des glucides");
+      method.append(new Option("Calories restantes", "remaining"), new Option("Ratio en g/kg", "ratio")); method.value = state.macroInput.carbsMethod || "remaining"; state.macroInput.carbsMethod = method.value;
+      method.onchange = () => { state.macroInput.carbsMethod = method.value; renderMacroInput(); }; label.append(method); inputFields.append(label);
+      fields.push(state.macroInput.carbsMethod === "ratio" ? ["Glucides (g/kg)", "carbs_perKg"] : ["Cible du coach (kcal/jour)", "calorieTarget"]);
+    }
+    for (const [label, key] of fields) {
+      const entry = field(label, key, "number", "0.01"), control = entry.querySelector("input"); control.value = state.macroInput[key] ?? "";
+      control.oninput = () => { state.macroInput[key] = control.value; applyMacroInput(); }; inputFields.append(entry);
+    }
+  };
+  inputMode.onchange = renderMacroInput; renderMacroInput(); inputControls.append(inputLabel, inputFields, inputError);
+
   const notesLabel = node("label", "auth-field", "Consignes, préférences et suppléments");
   const notesInput = node("textarea");
   notesInput.name = "nutrition_notes";
@@ -250,6 +324,13 @@ async function mountNutritionCore(container, savedValue = "") {
 
   const mealsWrap = node("div", "nutrition-meals");
   const renderedMeals = [];
+  const firstPopulatedMeal = state.meals.findIndex(meal => meal.items.length || meal.notes);
+  const refreshMealSummary = (index) => {
+    const meal = state.meals[index], section = renderedMeals[index];
+    if (!section) return;
+    section.querySelector(".nutrition-meal__summary-name").textContent = meal.name.trim() || `Repas ${index + 1}`;
+    section.querySelector(".nutrition-meal__summary-totals").textContent = totalsLabel(dailyTotals([meal]));
+  };
   const refreshMeal = (index) => {
     const meal = state.meals[index];
     const mealEl = renderedMeals[index];
@@ -257,6 +338,7 @@ async function mountNutritionCore(container, savedValue = "") {
     const total = emptyTotals();
     for (const item of meal.items) addNutrients(total, nutrientsFor(item, item.grams));
     mealEl.querySelector(".nutrition-meal__totals").textContent = totalsLabel(total);
+    refreshMealSummary(index);
     const itemList = mealEl.querySelector(".nutrition-items");
     itemList.replaceChildren();
     for (const [itemIndex, item] of meal.items.entries()) {
@@ -278,6 +360,7 @@ async function mountNutritionCore(container, savedValue = "") {
         mealEl.querySelector(".nutrition-meal__totals").textContent = totalsLabel(meal.items.reduce((sum, current) => {
           addNutrients(sum, nutrientsFor(current, current.grams)); return sum;
         }, emptyTotals()));
+        refreshMealSummary(index);
         refreshDaily();
       });
       amountLabel.append(amount);
@@ -293,14 +376,17 @@ async function mountNutritionCore(container, savedValue = "") {
   };
 
   for (const [index, meal] of state.meals.entries()) {
-    const section = node("section", "nutrition-meal");
+    const section = node("details", "nutrition-meal");
+    section.open = index === (firstPopulatedMeal < 0 ? 0 : firstPopulatedMeal);
+    const summary = node("summary", "nutrition-meal__summary");
+    summary.append(node("strong", "nutrition-meal__summary-name", meal.name), document.createTextNode(" · "), node("span", "nutrition-meal__summary-totals"));
     section.dataset.mealIndex = String(index);
     const heading = node("div", "nutrition-meal__heading");
     const nameLabel = node("label", "auth-field", `Repas ${index + 1}`);
     const nameInput = document.createElement("input");
     nameInput.value = meal.name;
     nameInput.maxLength = 80;
-    nameInput.addEventListener("input", (event) => { meal.name = event.currentTarget.value; });
+    nameInput.addEventListener("input", (event) => { meal.name = event.currentTarget.value; refreshMealSummary(index); });
     nameLabel.append(nameInput);
     heading.append(nameLabel);
 
@@ -337,7 +423,7 @@ async function mountNutritionCore(container, savedValue = "") {
     mealNote.placeholder = "Horaire, consigne ou variante";
     mealNote.addEventListener("input", (event) => { meal.notes = event.currentTarget.value; });
     notesLabel.append(mealNote);
-    section.append(heading, searchLabel, resultBox, selected, addRow, items, total, notesLabel);
+    section.append(summary, heading, searchLabel, resultBox, selected, addRow, items, total, notesLabel);
     mealsWrap.append(section);
     renderedMeals.push(section);
 
@@ -370,7 +456,9 @@ async function mountNutritionCore(container, savedValue = "") {
   }
 
   refreshDaily();
-  container.replaceChildren(targetsHeading, targets, formulaNote, comparison, sourceNote("nutrition-source-note"), notesLabel, node("p", "card-kicker nutrition-meals__title", "COMPOSITION DES REPAS"), sourceLabel, sourceHint, mealsWrap);
+  const sourceDetails = node("details", "nutrition-source-options");
+  sourceDetails.append(node("summary", "", "Choisir la base alimentaire"), sourceLabel, sourceHint);
+  container.replaceChildren(targetsHeading, inputControls, targets, formulaNote, comparison, sourceNote("nutrition-source-note"), notesLabel, node("p", "card-kicker nutrition-meals__title", "COMPOSITION DES REPAS"), sourceDetails, mealsWrap);
   container.onclick = (event) => {
     const section = event.target.closest(".nutrition-meal");
     if (!section) return;
@@ -403,8 +491,9 @@ async function mountNutritionCore(container, savedValue = "") {
   };
 
   return {
-    setTargets(values) { for(const key of ["protein_g","carbs_g","fat_g","fiber_g"]){state.targets[key]=values[key]??null;targets.querySelector(`[name="${key}"]`).value=state.targets[key]??"";}macrosChanged=true;refreshDaily();},
+    setTargets(values) { state.macroInput.mode="grams";inputMode.value="grams";renderMacroInput(); for(const key of ["protein_g","carbs_g","fat_g","fiber_g"]){state.targets[key]=values[key]??null;targets.querySelector(`[name="${key}"]`).value=state.targets[key]??"";}macrosChanged=true;refreshDaily();},
     serialize() {
+      if(state.macroInput.mode!=="grams")Object.assign(state.targets,resolveMacroTargets(state.macroInput));
       for (const [key, value] of Object.entries(state.targets)) {
         if (hasValue(value) && (!Number.isFinite(Number(value)) || Number(value) < 0)) throw new Error(`Vérifie l’objectif ${targetFields.find(field => field[1] === key)?.[0] || key} : indique un nombre positif ou zéro.`);
       }
@@ -413,6 +502,7 @@ async function mountNutritionCore(container, savedValue = "") {
         schema: "aa-nutrition-plan",
         version: 1,
         targets: Object.fromEntries(Object.entries(state.targets).map(([key, value]) => [key, !hasValue(value) ? null : Number(value)])),
+        macroInput: structuredClone(state.macroInput),
         notes: state.notes.trim(),
         meals: state.meals.map((meal) => ({
           name: meal.name.trim() || "Repas",
@@ -467,18 +557,46 @@ function renderNutritionCore(target, savedValue) {
   target.append(sourceNote("nutrition-source-note nutrition-source-note--client"));
 }
 
-export async function mountNutritionBuilder(container,savedValue="") {
- const parsed=parsePlan(savedValue),base=parsed.structured;const variants=structuredClone(base?.variants||{});let current=base?.activeVariant||'standard';
- if(!variants[current])variants[current]=base?{...base,variants:undefined,activeVariant:undefined}:null;
- const names={standard:'Plan standard',training:'Jour entraînement',rest:'Jour repos',high:'Jour haut',low:'Jour bas'};
- const controls=node('div','nutrition-variants'),label=node('label','auth-field','Version du plan alimentaire'),choice=document.createElement('select');choice.setAttribute('aria-label','Version du plan alimentaire');for(const[k,l]of Object.entries(names))choice.append(new Option(l,k));choice.value=current;label.append(choice);controls.append(label);
- controls.append(node('p','card-copy','Chaque version conserve ses repas et ses objectifs. Les versions renseignées sont accessibles au client après Enregistrer le programme.'));
- const content=node('div');container.replaceChildren(controls,content);let core=await mountNutritionCore(content,variants[current]?JSON.stringify(variants[current]):savedValue);if(!core)return null;
- choice.onchange=async()=>{const next=choice.value;try{variants[current]=JSON.parse(core.serialize());choice.disabled=true;current=next;core=await mountNutritionCore(content,variants[current]?JSON.stringify(variants[current]):'');}catch(e){choice.value=current;controls.append(node('p','inline-message',e.message));}finally{choice.disabled=false;}};
- const copy=node('button','auth-secondary','Dupliquer cette version vers un autre type de jour');copy.type='button';const destination=document.createElement('select');destination.setAttribute('aria-label','Destination de la copie');for(const[k,l]of Object.entries(names))destination.append(new Option(l,k));destination.value='training';copy.onclick=async()=>{if(destination.value===current)return;variants[current]=JSON.parse(core.serialize());variants[destination.value]=structuredClone(variants[current]);choice.value=destination.value;await choice.onchange();};controls.append(destination,copy);
- return {setTargets(values){if(choice.disabled||!core)throw Error('Attends le chargement de la version.');core.setTargets(values);},serialize(){if(choice.disabled||!core)throw Error('Attends le chargement de la version.');variants[current]=JSON.parse(core.serialize());return JSON.stringify({...variants[current],variants,activeVariant:current});}};
+export async function mountNutritionBuilder(container, savedValue = "") {
+  const base = parsePlan(savedValue).structured;
+  const state = normalizeNutritionModes(base);
+  const controls = node("div", "nutrition-variants"), modeLabel = node("label", "auth-field", "Mode alimentaire"), modeChoice = document.createElement("select");
+  modeChoice.setAttribute("aria-label", "Mode alimentaire"); modeChoice.append(new Option("STANDARD — 1 diète", "standard"), new Option("Jours haut/bas — 2 diètes", "highLow")); modeChoice.value = state.mode; modeLabel.append(modeChoice);
+  const dayLabel = node("label", "auth-field", "Diète à modifier"), dayChoice = document.createElement("select"); dayChoice.setAttribute("aria-label", "Diète à modifier"); dayLabel.append(dayChoice);
+  const hint = node("p", "card-copy", "Changer le mode conserve tes diètes précédentes.");
+  const error = node("p", "inline-message"); error.setAttribute("role", "status"); controls.append(modeLabel, dayLabel, hint, error);
+  const content = node("div"); container.replaceChildren(controls, content);
+  let busy = false, core = await mountNutritionCore(content, state.variants[state.current] ? JSON.stringify(state.variants[state.current]) : savedValue);
+  if (!core) return null;
+  const updateChoices = () => {
+    dayChoice.replaceChildren();
+    for (const [key, name] of state.mode === "standard" ? [["standard", "Diète STANDARD"]] : [["high", "Jour haut"], ["low", "Jour bas"]]) dayChoice.append(new Option(name, key));
+    dayChoice.value = state.current; dayLabel.hidden = state.mode === "standard";
+  };
+  const switchTo = async (mode, next) => {
+    const oldMode = state.mode, oldCurrent = state.current;
+    try {
+      state.variants[state.current] = JSON.parse(core.serialize()); busy = true; modeChoice.disabled = dayChoice.disabled = true;
+      if(mode === "highLow") for(const key of ["high", "low"]) if(!state.variants[key]) state.variants[key] = structuredClone(state.variants[key === "high" ? "training" : "rest"] || state.variants.standard);
+      const nextCore = await mountNutritionCore(content, state.variants[next] ? JSON.stringify(state.variants[next]) : "");
+      if(!nextCore)throw new Error("Le catalogue alimentaire ne peut pas être chargé.");
+      core = nextCore; state.mode = mode; state.current = next; error.textContent = "";
+    } catch(e) { state.mode = oldMode; state.current = oldCurrent; error.textContent = e.message; }
+    finally { busy = false; modeChoice.disabled = dayChoice.disabled = false; modeChoice.value = state.mode; updateChoices(); }
+  };
+  modeChoice.onchange = () => switchTo(modeChoice.value, modeChoice.value === "standard" ? "standard" : "high");
+  dayChoice.onchange = () => switchTo(state.mode, dayChoice.value); updateChoices();
+  return {
+    setTargets(values) { if(busy || !core)throw Error("Attends le chargement de la diète."); core.setTargets(values); },
+    serialize() { if(busy || !core)throw Error("Attends le chargement de la diète."); state.variants[state.current] = JSON.parse(core.serialize()); return JSON.stringify({...state.variants[state.current], variants: state.variants, activeVariant: state.current, nutritionMode: state.mode}); }
+  };
 }
-export function renderClientNutrition(target,savedValue){
- const plan=parsePlan(savedValue).structured;if(!plan?.variants){renderNutritionCore(target,savedValue);return;}
- const label=node('label','auth-field','Type de plan alimentaire'),choice=document.createElement('select');const names={standard:'Plan standard',training:'Jour entraînement',rest:'Jour repos',high:'Jour haut',low:'Jour bas'};for(const key of Object.keys(plan.variants))choice.append(new Option(names[key]||key,key));choice.value=plan.activeVariant||'standard';label.append(choice);const content=node('div');target.replaceChildren(label,content);choice.onchange=()=>renderNutritionCore(content,JSON.stringify(plan.variants[choice.value]));choice.onchange();
+export function renderClientNutrition(target, savedValue) {
+  const plan = parsePlan(savedValue).structured;
+  if(!plan?.variants){ renderNutritionCore(target, savedValue); return; }
+  const state = normalizeNutritionModes(plan);
+  if(state.mode === "standard") { renderNutritionCore(target, JSON.stringify(state.variants.standard)); return; }
+  const label = node("label", "auth-field", "Choisir ta diète haut/bas"), choice = document.createElement("select"); choice.setAttribute("aria-label", "Choisir ta diète haut/bas");
+  choice.append(new Option("Jour haut", "high"), new Option("Jour bas", "low")); choice.value = state.current; label.append(choice);
+  const content = node("div"); target.replaceChildren(label, content); choice.onchange = () => renderNutritionCore(content, JSON.stringify(state.variants[choice.value])); choice.onchange();
 }

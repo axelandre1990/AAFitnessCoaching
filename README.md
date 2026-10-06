@@ -118,3 +118,15 @@ Les moyennes ignorent les valeurs manquantes et conservent les zéros. Les objec
 
 ## V24
 Calories du plan = somme des kcal source par portion. Calories théoriques restent calculées sur les macros. Fibres théoriques automatiques = 0,014 × calories théoriques. Enregistrement via RPC invoker ciblée, avec permissions de colonnes et RLS existantes.
+
+## V25 — Parcours annuel et interface simplifiée
+
+Navigation client : Aujourd’hui, Programmes, Bilan, Parcours annuel, Progression. Fiche coach : Bilan, Programmes, Parcours annuel, Progression, Paramètres. Les onglets conservent les saisies; les repas et outils avancés sont repliables.
+
+Roadmap stratégique dédiée sur52semaines/12mois : date de départ, objectif, phases, étapes, événements, priorités et cibles facultatives. Aucune projection de résultat inventée. Les bilans et prescriptions hebdomadaires restent distincts.
+
+Nutrition : STANDARD avec une diète, ou jours haut/bas avec deux. Cibles en g/jour, pourcentages d’un objectif calorique, ou g/kg renseignés par le coach. Les jours hauts ne sont pas assimilés automatiquement aux jours d’entraînement. Anciennes variantes conservées. Calories du plan = valeurs des aliments; théorie4/4/9 et fibres0,014×calories théoriques.
+
+Reprise des14onglets : trois suivis personnalisés avec libellés, repères de mensurations (28jours configurables), pourcentages hebdomadaires et protéinesg/kg avec effectifs, appréciation facultative du coach, guide des termes d’entraînement, historiques lisibles. Macro timing explicitement exclu.
+
+Deux revues d’usage indépendantes, avec fixtures coach/client fictives et corrections entre les cycles, sont documentées dans docs/implementation/2026-10-06-review-round-1.md et round-2.md du workspace. La référence PrepMaster a été contrôlée sur son interface publique; les fonctions authentifiées privées ne sont pas présentées comme vérifiées.

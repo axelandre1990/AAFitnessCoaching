@@ -1,4 +1,4 @@
-import { captureInstallPrompt, getInstallState, requestInstall } from "./install.js?v=24";
+import { captureInstallPrompt, getInstallState, requestInstall } from "./install.js?v=25";
 
 const installButton = document.querySelector("#install-button");
 const installLabel = document.querySelector("#install-label");
